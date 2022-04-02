@@ -10,6 +10,6 @@ ip a
 3: wlp3s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
     link/ether f8:28:19:5a:98:d7 brd ff:ff:ff:ff:ff:ff
     inet 192.168.0.135/24 brd 192.168.0.255 scope global dynamic noprefixroute wlp3s0
-       valid_lft 4797sec preferred_lft 4797sec
+       valid_lft 4383sec preferred_lft 4383sec
     inet6 fe80::71df:2f28:5f77:f22/64 scope link noprefixroute 
        valid_lft forever preferred_lft forever
