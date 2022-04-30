@@ -16,33 +16,52 @@ def main():
     mapp(args)
 
 
-def store_up(segment):
-    leido = (segment.read(1024))
-    segment.seek(0)
-    segment.write(leido.decode().upper().encode())
-    os.kill(os.fork(), signal.SIGUSR1)
+def store_up(segment, cpid, args):
+    for line in sys.stdin:
+        if os.getpid() == cpid[0]:
+            print(line)
+            if os.getpid() == cpid[0]:
+                print('Hijo_1')
+                segment.write(bytes(line))
+                signal.raise_signal(signal.SIGUSR1)
+
+            elif os.getpid() == cpid[1]:
+                print('Hijo_2')
+            for h in range(2):
+                signal.sigwait([signal.SIGUSR1])
+
+            readLine = segment.readline()
+
+            with open(args.file, 'w') as file:
+                file.write(readLine.upper())
 
 
 def mapp(args):
 
     with open('file.txt', 'w+') as file:
-        segment = mmap.mmap(file.fileno(), 1024)
-        signal.signal(signal.SIGUSR1, store_up(segment))
-        ppid = []
+        segment = mmap.mmap(-1, 1024)
+        signal.signal(signal.SIGUSR1, signal.SIG_DFL)
+        ppid = os.getpid()
+        cpid = []
 
         for i in range(2):
-            if fork() == 0:
-                ppid.append(os.getpid())
+            if os.getpid() == ppid:
+                cpid.append(os.fork())
             else:
-                print(segment.readline())
                 os.wait()
-        for line in sys.stdin:
-            if os.getpid() == ppid[0]:
-                segment.write(bytes(line))
-                signal.raise_signal(signal.SIGUSR1)
-                segment.seek()
-                signal.pause()
-                exit()
+        if os.fork():
+            w = os.fdopen(w, 'w')
+            print(cpid)
+            w.write(f'{cpid}')
+            w.close()
+        else:
+            os.close(w)
+            r = os.fdopen(r, 'r')
+            cpid = r.read()
+            print(cpid)
+            r.close()
+
+        store_up(segment, cpid, args)
 
 
 if __name__ == '__main__':
