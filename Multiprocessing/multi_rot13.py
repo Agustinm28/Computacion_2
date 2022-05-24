@@ -1,65 +1,49 @@
+'''
+Escribir un programa que genere dos hijos utilizando multiprocessing.
+
+Uno de los hijos deberá leer desde stdin texto introducido por el usuario, y deberá escribirlo en un pipe (multiprocessing).
+
+El segundo hijo deberá leer desde el pipe el contenido de texto, lo encriptará utilizando el algoritmo ROT13, y lo almacenará en una cola de mensajes (multiprocessing).
+
+El primer hijo deberá leer desde dicha cola de mensajes y mostrar el contenido cifrado por pantalla.
+'''
 import multiprocessing as mp
+from multiprocessing import Pipe, Queue
+import os
 import sys
+import time
 
 
-def main():
-
-    q = mp.Queue()
-    p_comn, c_comn = mp.Pipe()
-
-    hijo1 = mp.Process(target=readInput, args=(q, c_comn))
-    hijo2 = mp.Process(target=rot13, args=(q, p_comn))
-
-    hijo1.start()
-    hijo2.start()
-
-    while hijo1.is_alive() or hijo2.is_alive():
-        pass
-
-
-def readInput(queue, pipe):
+def readInput(q, r_pipe):
     sys.stdin = open(0)
-    print('Ingrese cadena: ')
-
+    print('Ingrese una cadena: ')
     for line in sys.stdin:
-        pipe.send(line)
-        if line == '\n':
-            return
-        print(f'Salida codificada: {queue.get()}\n')
-        print('Ingrese cadena: ')
+        r_pipe.send(line)
+        try:
+            print('Cadena codificada: %s' % q.get())
+        except:
+            print('Cola vacia... saliendo')
+            break
+        print('Ingrese una cadena: ')
+    r_pipe.close()
 
 
-def rot13(queue, pipe):
-    dic = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
-           'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
-
+def R13_e(q, e_pipe):
     while True:
-        enc = pipe.recv()
-        if enc != '\n':
-            aux = []
-            enc = enc.split()
-
-            for e in enc:
-                for char in e:
-                    if char == '\n':
-                        continue
-                    elif char.isupper():
-                        if char == 'Ñ':
-                            aux.append(dic[(dic.index('N') + 13) % 26].lower())
-                        else:
-                            aux.append(dic[(dic.index(char) + 13) % 26])
-                    elif char == 'ñ':
-                        aux.append(dic[(dic.index('N') + 13) % 26])
-                    else:
-                        aux.append(
-                            dic[(dic.index(char.upper()) + 13) % 26].lower())
-                aux.append(' ')
-            enc = ''.join(char for char in aux)
-            queue.put(enc)
-
-        else:
-            return
+        etxt = e_pipe.recv()
+        abc = 'abcdefghijklmnopqrstuvwxyz'
+        convert = ''.join([abc[(abc.find(c)+13) % 26] for c in etxt])
+        q.put(convert)
 
 
 if __name__ == '__main__':
-    main()
+    e, r = mp.Pipe()
+    q = mp.Queue()
+
+    p1 = mp.Process(target=readInput, args=(q, r))
+    p2 = mp.Process(target=R13_e, args=(q, e))
+
+    p1.start()
+    p2.start()
+    p1.join()
+    p2.join()
