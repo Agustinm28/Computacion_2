@@ -7,7 +7,7 @@ import asyncio
 global chat_id
 
 with open('./data/BOT_CREDENTIALS.txt', 'r') as f:
-    token = int(f.read())
+    token = str(f.read())
     
 chat_id = None
 
