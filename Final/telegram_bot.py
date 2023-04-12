@@ -6,7 +6,9 @@ import asyncio
 
 global chat_id
 
-token = "6044347976:AAGnUzFexSCQoZvV9x0hrFb2EIJZy03XFZ0"
+with open('./data/BOT_CREDENTIALS.txt', 'r') as f:
+    token = int(f.read())
+    
 chat_id = None
 
 logging.basicConfig(
