@@ -6,4 +6,4 @@ Link del bot de Telegram: t.me/Moby2365bot
 Sistema de deteccion de movimiento a partir de un video
 
 <h2 style="color:#d9b3ff;">Diagrama y flujo de trabajo</h2>
-<img src="Diagram.jpeg" alt="Diagrama">
+<img src="assets/Diagram.jpeg" alt="Diagrama">
