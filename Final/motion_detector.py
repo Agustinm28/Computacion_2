@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 # Captura el video a ser analizado
-cap = cv2.VideoCapture('./assets/airport.mp4')
+cap = cv2.VideoCapture('./assets/airport_fhd.mp4')
 # Determina el algoritmo de sustraccion a utilizar, MOG2 en este caso
 fgbg = cv2.createBackgroundSubtractorMOG2()
 # Se utilizara posteriormente para mejorar imagen binaria
