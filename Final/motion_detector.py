@@ -1,8 +1,9 @@
 import cv2
 import numpy as np
+import telegram_bot as tb
 
 # Captura el video a ser analizado
-cap = cv2.VideoCapture('./assets/airport_fhd.mp4')
+cap = cv2.VideoCapture('./assets/airport_sd.mp4')
 # Determina el algoritmo de sustraccion a utilizar, MOG2 en este caso
 fgbg = cv2.createBackgroundSubtractorMOG2()
 # Se utilizara posteriormente para mejorar imagen binaria
@@ -44,6 +45,7 @@ while True:
             x, y, w, h = cv2.boundingRect(cnt)
             cv2.rectangle(frame, (x,y), (x+w, y+h),(0,255,0), 2)
             state_text = "Estado: Alerta Movimiento Detectado!"
+            tb.send_message("Movimiento detectado")
             color = (0, 0, 255)    
 
     # Visuzalizamos el alrededor del área que vamos a analizar y el estado de la detección de movimiento        
