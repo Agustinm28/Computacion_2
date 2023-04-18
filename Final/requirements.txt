@@ -2,4 +2,4 @@ opencv-python
 numpy
 telegram
 python-telegram-bot
-libgl1-mesa-glx
+tqdm
