@@ -21,9 +21,9 @@ def scale_image(image, scale):
     # Exportar la imagen escalada a un archivo
     cv2.imwrite("foto_escalada.jpg", imagen_escalada)
 
-def scale_video():
+def scale_video(video_path, scale):
     # Abrir el video original
-    cap = cv2.VideoCapture("./assets/airport_hd.mp4")
+    cap = cv2.VideoCapture(video_path)
 
     # Obtener el ancho y el alto del video
     ancho = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -34,7 +34,7 @@ def scale_video():
     pbar = tqdm(total=frames, desc="Processing Video", unit="frame", colour="green")
 
     # Definir el factor de escala
-    escala = 4
+    escala = scale
 
     # Definir el nuevo ancho y alto
     nuevo_ancho = ancho * escala
@@ -42,7 +42,7 @@ def scale_video():
 
     # Definir el codec y el nombre del nuevo video
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    out = cv2.VideoWriter("./assets/video_escalado.mp4", fourcc, 30.0, (nuevo_ancho, nuevo_alto))
+    out = cv2.VideoWriter("./scaled_files/video_escalado.mp4", fourcc, 30.0, (nuevo_ancho, nuevo_alto))
 
     # Leer cada frame del video original y escalarlo
     while True:
