@@ -4,6 +4,7 @@ from multiprocessing import Manager
 import asyncio
 import pickle
 import struct
+import os
 
 
 class ForkedTCPServer(socketserver.ForkingMixIn, socketserver.TCPServer):
@@ -17,13 +18,13 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
         print('[NEW CONNECTION] {} connected.'.format(self.client_address))
 
         # Leer la longitud del objeto serializado
-        file_pickle_size_bytes = self.request.recv(4)
-        file_pickle_size = struct.unpack('!I', file_pickle_size_bytes)[0]
-        print(f'[READING] File size: {file_pickle_size}')
+        # file_pickle_size_bytes = self.request.recv(4)
+        # file_pickle_size = struct.unpack('!I', file_pickle_size_bytes)[0]
+        # print(f'[READING] File size: {file_pickle_size}')
 
         # Leer el objeto serializado completo
-        file_pickle = b''
         print(f'[READING] Reading searialized object')
+        file_pickle = b''
         while True:
             data = self.request.recv(BUFFER_SIZE)
             if not data:
@@ -40,12 +41,13 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
         file_data = b''
         print(f'[READING] Reading file')
         while len(file_data) < file_size:
-            data = self.request.recv(1024*1024)
+            data = self.request.recv(BUFFER_SIZE)
             file_data += data
 
         # Escribir el archivo en el disco
         filename = file_obj['filename']
         print(f'[SAVING] Saving file locally')
+        os.makedirs('./rec_files/', exist_ok=True)
         with open('./rec_files/' + filename, 'wb') as f:
             f.write(file_data)
         print(f'[SAVED] File saved as {filename}')
