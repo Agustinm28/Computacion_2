@@ -37,15 +37,18 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
         print(f'[SERIALIZATION] Object deserialized')
 
         # Leer el archivo completo
-        file_size = file_obj['size']
+        #file_size = file_obj['size']
         file_data = b''
         print(f'[READING] Reading file')
-        while len(file_data) < file_size:
+        while True:
             data = self.request.recv(BUFFER_SIZE)
+            if not data:
+                break
             file_data += data
 
         # Escribir el archivo en el disco
         filename = file_obj['filename']
+        file_data = file_obj['data']
         print(f'[SAVING] Saving file locally')
         os.makedirs('./rec_files/', exist_ok=True)
         with open('./rec_files/' + filename, 'wb') as f:

@@ -155,7 +155,7 @@ def send_file(file):
         filename = os.path.basename(file)
         file_data = f.read()
         #file_size = len(file_data)
-        file_obj = (filename, file_data)
+        file_obj = {'filename':filename, 'data':file_data}
         file_pickle = pickle.dumps(file_obj) 
         print("[SERIALIZING] Pickle object loaded")
         f.close()
@@ -165,12 +165,11 @@ def send_file(file):
         print(f"[CONNECT] Conexion establecida con {HOST} en el puerto {PORT}")
         print("[SENDING FILE]")        
         sock.sendall(file_pickle)
-        sock.sendall(file_data)
+        #sock.sendall(file_data)
         # for i in range(0, len(file_pickle), 1024*1024):
         #     sock.send(file_pickle[i:i+1024*1024])
-        # sock.close()
-
-    #os.remove(file)
+        sock.close()
+        #os.remove(file)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Telegram Bot')
