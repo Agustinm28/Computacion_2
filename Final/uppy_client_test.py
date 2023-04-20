@@ -148,6 +148,7 @@ async def receive_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def send_file(file):
     HOST, PORT = args.ip, int(args.port)
+    BUFFER_SIZE = 1024 * 1024
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.connect((HOST, PORT))
@@ -156,9 +157,11 @@ def send_file(file):
         with open(file, "rb") as f:
             filename = os.path.basename(file)
             file_data = f.read()
-            file_obj = {'filename': filename, 'data': file_data}
+            file_size = len(file_data)
+            file_obj = {'filename': filename, 'size': file_size}
             file_pickle = pickle.dumps(file_obj)
             sock.sendall(file_pickle)
+            sock.sendall(file_data)
         os.remove(file)
 
 if __name__ == '__main__':
