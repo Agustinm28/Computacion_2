@@ -169,7 +169,7 @@ def send_file(file):
         # for i in range(0, len(file_pickle), 1024*1024):
         #     sock.send(file_pickle[i:i+1024*1024])
         sock.close()
-        #os.remove(file)
+        os.remove(file)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Telegram Bot')

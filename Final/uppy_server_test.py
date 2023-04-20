@@ -1,11 +1,13 @@
 import socketserver
 import argparse
 from multiprocessing import Manager
-import asyncio
 import pickle
-import struct
 import os
+from queue import Queue
+import time
 
+manager = Manager()  # Creamos una cola compartida para comunicarse con los procesos hijos
+queue = manager.Queue()
 
 class ForkedTCPServer(socketserver.ForkingMixIn, socketserver.TCPServer):
     pass
@@ -56,7 +58,10 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
         print(f'[SAVED] File saved as {filename}')
         self.request.close()
 
-        # self.manager.queue.put(filename) # Agregamos el nombre de archivo a la cola compartida
+        print(f'[PROCESSING] Sending to queue')
+        queue.put_nowait(filename)
+
+        #self.manager.queue.put(filename) # Agregamos el nombre de archivo a la cola compartida
 
 
 def main():
@@ -67,26 +72,27 @@ def main():
 
     server(args)
 
+def check_queue():
+    if not queue.empty():
+        return queue.get_nowait()
 
 def server(args):
 
     HOST, PORT = '127.0.0.1', args.port
-
-    manager = Manager()  # Creamos una cola compartida para comunicarse con los procesos hijos
-    queue = manager.Queue()
 
     with ForkedTCPServer((HOST, PORT), TCPRequestHandler) as server:
         print(f'[WAITING] Server is waiting for connections on {HOST}:{PORT}')
 
         while True:
             server.handle_request()
+            print(f'[PROCESSING] In queue')
 
             # Verificamos si hay algún archivo en la cola compartida
+            time.sleep(1) #! Solucion temporal
             while not queue.empty():
-                filename = queue.get()
+                filename = queue.get_nowait()
                 print(f'[PROCESSING] Processing file {filename}...')
                 # Agregue su código aquí para procesar el archivo, como enviarlo a un modelo de aprendizaje automático para su análisis.
-
 
 if __name__ == "__main__":
     main()
