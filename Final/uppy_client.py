@@ -6,6 +6,8 @@ from telegram.ext import filters, ApplicationBuilder, ContextTypes, CommandHandl
 import asyncio
 import argparse
 import os
+import pickle
+import time
 
 global chat_id
 
@@ -148,18 +150,24 @@ async def receive_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def send_file(file):
     HOST, PORT = args.ip, int(args.port)
 
+    with open(file, "rb") as f:
+        print("[SERIALIZING] Loading object") 
+        filename = os.path.basename(file)
+        file_data = f.read()
+        #file_size = len(file_data)
+        file_obj = {'filename':filename, 'data':file_data}
+        file_pickle = pickle.dumps(file_obj) 
+        print("[SERIALIZING] Pickle object loaded")
+        f.close()
+
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.connect((HOST, PORT))
         print(f"[CONNECT] Conexion establecida con {HOST} en el puerto {PORT}")
-        print("[SENDING FILE]")
-        with open(file, "rb") as f:
-            filename = file.split('/')[-1]
-            sock.send(f"./rec_files/{filename}\n".encode())
-            while True:
-                data = f.read(1024)
-                if not data:
-                    break
-                sock.sendall(data)
+        print("[SENDING FILE]")        
+        sock.sendall(file_pickle)
+        #sock.sendall(file_data)
+        # for i in range(0, len(file_pickle), 1024*1024):
+        #     sock.send(file_pickle[i:i+1024*1024])
         sock.close()
         os.remove(file)
 

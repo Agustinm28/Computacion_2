@@ -3,3 +3,4 @@ numpy
 telegram
 python-telegram-bot
 tqdm
+Pillow
