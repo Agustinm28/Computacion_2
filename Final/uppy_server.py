@@ -12,6 +12,7 @@ import multiprocessing
 import mimetypes
 from PIL import Image
 from moviepy.video.io.VideoFileClip import VideoFileClip
+import moviepy.editor as mp
 
 #* UPSCALER
 
@@ -36,7 +37,7 @@ def scale_image(filename, scale):
     export_path = f'./upscaled_files/upscaled_{filename}'
     cv2.imwrite(export_path, imagen_escalada)
 
-    # Algoritmo de compresion para lograr que pese menos de 50 MB
+    # Algoritmo de compresion para lograr que pese menos de 20 MB
     max_size = 20 * 1024 * 1024
     while os.path.getsize(export_path) > max_size:
         print(f"[COMPRESSION] The file is too large {os.path.getsize(export_path)}")
@@ -64,9 +65,8 @@ def scale_video(filename, scale):
     nuevo_alto = alto * escala
 
     # Definir el codec y el nombre del nuevo video
-    print(cv2.getBuildInformation())
-    fourcc = cv2.VideoWriter_fourcc(*"avc1") # Codec H264
-    breakpoint()
+    #? Solucion a cv2 no localizando el codec h264 -> Instalar opencv desde sudo apt-get, luego hacer sudo apt-get update y uprgrade
+    fourcc = cv2.VideoWriter_fourcc(*"avc1") # Codec H264 (avc1), H265 (hvc1)
     os.makedirs('./upscaled_files/', exist_ok=True)
     out = cv2.VideoWriter(f"./upscaled_files/upscaled_{filename}", fourcc, 30.0, (nuevo_ancho, nuevo_alto))
 
@@ -83,26 +83,6 @@ def scale_video(filename, scale):
             break
 
     pbar.close()
-    breakpoint()
-    # Algoritmo de compresion para lograr que pese menos de 50 MB
-    export_path = f"./upscaled_files/upscaled_{filename}"
-    max_size = 20 * 1024 * 1024
-    print('File_Size: ' + str(os.path.getsize(export_path)/1024/1024))
-
-    if os.path.getsize(export_path) > max_size:
-        print(f'[COMPRESSION] File is larger than 20MB, starting compression')
-        os.makedirs('./compressed_files/', exist_ok=True)
-        input_video = export_path
-        output_video = f'./compressed_files/compressed_upscaled_{filename}'
-        target_size = max_size  # Tamaño máximo en bytes (20 MB)
-
-        # Cargar el clip de video original
-        print(f'[COMPRESSION] Reading upscaled file')
-        clip = VideoFileClip(input_video)
-
-        # Establecer la tasa de bits objetivo
-        print(f'[COMPRESSION] Compressing file')
-        clip.write_videofile(output_video, bitrate=f"{int(clip.bitrate * target_size / clip.size // 1000)}k")
 
     print(f'Resolucion de entrada: {ancho}x{alto}')
     print(f'Razon de escala: x{escala}')
@@ -112,6 +92,27 @@ def scale_video(filename, scale):
     cap.release()
     out.release()
     cv2.destroyAllWindows()
+
+    # Algoritmo de compresion para lograr que pese menos de 50 MB
+    export_path = f"./upscaled_files/upscaled_{filename}"
+    max_size = 20
+
+    if os.path.getsize(export_path) > max_size:
+        print(f'[COMPRESSION] File is larger than 20MB, starting compression')
+        os.makedirs('./compressed_files/', exist_ok=True)
+        input_video = export_path
+        output_video = f'./compressed_files/compressed_upscaled_{filename}'
+
+        # Cargar el clip de video original
+        print(f'[COMPRESSION] Reading upscaled file')
+        clip = VideoFileClip(input_video)
+
+        # Establecer la tasa de bits objetivo
+        new_bitrate = f"{int((20 * 8 * 1000) / clip.duration)}k"
+
+        #Compresion a nueva tasa de bits
+        print(f'[COMPRESSION] Compressing file')
+        clip.write_videofile(output_video, bitrate=new_bitrate)
 
 #* SERVER
 
@@ -210,7 +211,6 @@ def server(args):
 
     with ForkedTCPServer((HOST, PORT), TCPRequestHandler) as server:
         print(f'[WAITING] Server is waiting for connections on {HOST}:{PORT}')
-        print(cv2.getBuildInformation())
 
         server.serve_forever()
 
