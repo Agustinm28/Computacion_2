@@ -4,23 +4,27 @@ from multiprocessing import Manager
 import pickle
 import os
 from queue import Queue
+import subprocess
 import time
 import cv2
 from tqdm import tqdm
 import multiprocessing
 import mimetypes
+from PIL import Image
+from moviepy.video.io.VideoFileClip import VideoFileClip
 
 #* UPSCALER
 
 def scale_image(filename, scale):
     image_path = f'./rec_files/{filename}'
-    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    image = cv2.imread(image_path, cv2.IMREAD_COLOR)
     # Leer la resolución de entrada de la imagen
     alto, ancho = image.shape[:2]
-    print(f'Resolucion de entrada: {alto}x{ancho}')
     # Duplicar la resolución de la imagen
     nuevo_alto = alto * scale
     nuevo_ancho = ancho * scale
+    # Informacion de log
+    print(f'Resolucion de entrada: {alto}x{ancho}')
     print(f'Razon de escala: x{scale}')
     print(f'Resolucion de salida: {nuevo_alto}x{nuevo_ancho}')
     # Escalar la imagen con el método cv2.INTER_LANCZOS
@@ -31,6 +35,13 @@ def scale_image(filename, scale):
     os.makedirs('./upscaled_files/', exist_ok=True)
     export_path = f'./upscaled_files/upscaled_{filename}'
     cv2.imwrite(export_path, imagen_escalada)
+
+    # Algoritmo de compresion para lograr que pese menos de 50 MB
+    max_size = 20 * 1024 * 1024
+    while os.path.getsize(export_path) > max_size:
+        print(f"[COMPRESSION] The file is too large {os.path.getsize(export_path)}")
+        img = Image.open(export_path)
+        img.save(export_path, "JPEG", quality=90, optimize=True)
 
 def scale_video(filename, scale):
     video_path = f'./rec_files/{filename}'
@@ -53,7 +64,7 @@ def scale_video(filename, scale):
     nuevo_alto = alto * escala
 
     # Definir el codec y el nombre del nuevo video
-    fourcc = cv2.VideoWriter_fourcc(*"hev1") #! Verificar otras opciones de codec
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v") # Codec H265
     os.makedirs('./upscaled_files/', exist_ok=True)
     out = cv2.VideoWriter(f"./upscaled_files/upscaled_{filename}", fourcc, 30.0, (nuevo_ancho, nuevo_alto))
 
@@ -70,6 +81,32 @@ def scale_video(filename, scale):
             break
 
     pbar.close()
+
+    # Algoritmo de compresion para lograr que pese menos de 50 MB
+    export_path = f"./upscaled_files/upscaled_{filename}"
+    max_size = 20 * 1024 * 1024
+    print('File_Size: ' + str(os.path.getsize(export_path)/1024/1024))
+
+    #! NO FUNCIONA
+    if os.path.getsize(export_path) > max_size:
+        # Cargar el video en Moviepy
+        video = VideoFileClip(export_path)
+
+        # Obtener el tamaño total del archivo de video
+        video_size = video.size
+
+        # Calcular el número de partes necesarias
+        num_parts = (video_size // max_size) + 1
+
+        # Calcular la duración de cada parte
+        part_duration = video.duration / num_parts
+
+        # Utilizar la función subclip() de Moviepy para dividir el archivo en partes
+        for i in range(num_parts):
+            start_time = i * part_duration
+            end_time = (i+1) * part_duration if i != num_parts-1 else video.duration
+            output_path = f"./divided_files/{filename}_{i}.mp4"
+            video.subclip(start_time, end_time).write_videofile(output_path, codec="libx264")
 
     print(f'Resolucion de entrada: {ancho}x{alto}')
     print(f'Razon de escala: x{escala}')
@@ -132,7 +169,6 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
         print(f'[PROCESSING] Sending to queue')
         queue.put_nowait(filename)
 
-        #self.manager.queue.put(filename) # Agregamos el nombre de archivo a la cola compartida
 
 
 def main():
@@ -163,26 +199,14 @@ def process_queue():
             filename = queue.get_nowait()
             filetype, encoding = mimetypes.guess_type(filename)
             print(f'[PROCESSING] Processing file {filename}...')
-            print(filetype)
             if filetype.startswith('video/'):
-                # Crear un proceso hijo
-                process = multiprocessing.Process(target=scale_video, args=(filename, 2))
-                
-                # # # Iniciar el proceso hijo
-                process.start()
-                
-                # # # Esperar a que el proceso hijo termine
-                process.join()
+                # Procesado de Video
+                scale_video(filename, 2)
+                print(f'[PROCESSING] File {filename} processed')
             else:
-                print("Es una imagen")
-                # Crear un proceso hijo
-                process = multiprocessing.Process(target=scale_image, args=(filename, 2))
-                
-                # # # Iniciar el proceso hijo
-                process.start()
-                
-                # # # Esperar a que el proceso hijo termine
-                process.join()
+                # Procesado de imagen
+                scale_image(filename, 2)
+                print(f'[PROCESSING] File {filename} processed')
 
 def server(args):
 

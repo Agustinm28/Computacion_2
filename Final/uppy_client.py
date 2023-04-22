@@ -165,9 +165,6 @@ def send_file(file):
         print(f"[CONNECT] Conexion establecida con {HOST} en el puerto {PORT}")
         print("[SENDING FILE]")        
         sock.sendall(file_pickle)
-        #sock.sendall(file_data)
-        # for i in range(0, len(file_pickle), 1024*1024):
-        #     sock.send(file_pickle[i:i+1024*1024])
         sock.close()
         os.remove(file)
 

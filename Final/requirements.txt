@@ -4,3 +4,4 @@ telegram
 python-telegram-bot
 tqdm
 Pillow
+moviepy
