@@ -64,7 +64,9 @@ def scale_video(filename, scale):
     nuevo_alto = alto * escala
 
     # Definir el codec y el nombre del nuevo video
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v") # Codec H265
+    print(cv2.getBuildInformation())
+    fourcc = cv2.VideoWriter_fourcc(*"avc1") # Codec H264
+    breakpoint()
     os.makedirs('./upscaled_files/', exist_ok=True)
     out = cv2.VideoWriter(f"./upscaled_files/upscaled_{filename}", fourcc, 30.0, (nuevo_ancho, nuevo_alto))
 
@@ -81,32 +83,26 @@ def scale_video(filename, scale):
             break
 
     pbar.close()
-
+    breakpoint()
     # Algoritmo de compresion para lograr que pese menos de 50 MB
     export_path = f"./upscaled_files/upscaled_{filename}"
     max_size = 20 * 1024 * 1024
     print('File_Size: ' + str(os.path.getsize(export_path)/1024/1024))
 
-    #! NO FUNCIONA
     if os.path.getsize(export_path) > max_size:
-        # Cargar el video en Moviepy
-        video = VideoFileClip(export_path)
+        print(f'[COMPRESSION] File is larger than 20MB, starting compression')
+        os.makedirs('./compressed_files/', exist_ok=True)
+        input_video = export_path
+        output_video = f'./compressed_files/compressed_upscaled_{filename}'
+        target_size = max_size  # Tamaño máximo en bytes (20 MB)
 
-        # Obtener el tamaño total del archivo de video
-        video_size = video.size
+        # Cargar el clip de video original
+        print(f'[COMPRESSION] Reading upscaled file')
+        clip = VideoFileClip(input_video)
 
-        # Calcular el número de partes necesarias
-        num_parts = (video_size // max_size) + 1
-
-        # Calcular la duración de cada parte
-        part_duration = video.duration / num_parts
-
-        # Utilizar la función subclip() de Moviepy para dividir el archivo en partes
-        for i in range(num_parts):
-            start_time = i * part_duration
-            end_time = (i+1) * part_duration if i != num_parts-1 else video.duration
-            output_path = f"./divided_files/{filename}_{i}.mp4"
-            video.subclip(start_time, end_time).write_videofile(output_path, codec="libx264")
+        # Establecer la tasa de bits objetivo
+        print(f'[COMPRESSION] Compressing file')
+        clip.write_videofile(output_video, bitrate=f"{int(clip.bitrate * target_size / clip.size // 1000)}k")
 
     print(f'Resolucion de entrada: {ancho}x{alto}')
     print(f'Razon de escala: x{escala}')
@@ -214,6 +210,7 @@ def server(args):
 
     with ForkedTCPServer((HOST, PORT), TCPRequestHandler) as server:
         print(f'[WAITING] Server is waiting for connections on {HOST}:{PORT}')
+        print(cv2.getBuildInformation())
 
         server.serve_forever()
 
