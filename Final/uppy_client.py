@@ -170,7 +170,7 @@ def send_file(file):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Telegram Bot')
-    parser.add_argument('-ip', type=str, default='127.0.0.1', help='IP of the precess server')
+    parser.add_argument('-ip', type=str, default='127.0.0.1', help='IP of the process server')
     parser.add_argument('-port', '-p', type=int, default=5556, help='Port of the process server')
     args = parser.parse_args()
 

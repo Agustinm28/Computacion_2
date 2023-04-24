@@ -5,3 +5,5 @@ python-telegram-bot
 tqdm
 Pillow
 moviepy
+ffprobe-python
+ffmpeg-python
