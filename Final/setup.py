@@ -10,14 +10,8 @@ else:
     subprocess.run(["python3", "-m", "venv", "env"], check=True)
     print("Created new virtual environment.")
 
-# Activate virtual environment
-if platform.system() == "Windows":
-    activate_command = os.path.join("env", "Scripts", "activate.bat")
-elif platform.system() == "Darwin":  # Mac OS
-    activate_command = os.path.join("env", "bin", "activate")
-else:
-    activate_command = os.path.join("env", "bin", "activate")
-subprocess.run([activate_command], check=True, shell=True)
+# Ruta completa al archivo 'activate' en el directorio del entorno virtual
+subprocess.run(["source", "env.sh"], check=True)
 
 # Install dependencies and project package
-subprocess.run(["pip", "install", "-r", "requirements.txt"], check=True)
+# subprocess.run(["pip", "install", "-r", "requirements.txt"], check=True)

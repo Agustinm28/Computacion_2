@@ -70,32 +70,31 @@ def process_queue():
             filename = queue.get_nowait()
             filetype, encoding = mimetypes.guess_type(filename)
             print(f'[PROCESSING] Processing file {filename}...')
-            #! Que se genere un proceso hijo cada vez que se vaya a procesar el archivo
             if filetype.startswith('video/'):
                 # Procesado de Video
-                scale_video(filename, 2)
-            else:
-                # Procesado de imagen
                 p_image = multiprocessing.Process(
-                    target=scale_image, args=(filename, 2))
+                    target=scale_video, args=(filename, 2))
                 print(f'[PROCESSING] Generating son process for {filename}')
                 p_image.start()
                 p_image.join()
-                #! Manejo errores: Limitacion API, limitacion Memoria
-                #! No devuelve imagenes escaladas con IA por alguna razon o cuando envias dos imagenes seguidas
-                # esrgan(filename)
+            else:
+                # Procesado de imagen
+                p_image = multiprocessing.Process(
+                    target=scale_image_ia, args=(filename,))
+                print(f'[PROCESSING] Generating son process for {filename}')
+                p_image.start()
+                p_image.join()
             print(f'[PROCESSING] File {filename} processed')
             file_path = f'./upscaled_files/upscaled_{filename}'
             chat_id = int((filename.split("_"))[0])
             print(f'[SENDING] Sending file {filename} to Telegram user')
-            p_send = multiprocessing.Process(
-                target=send_file, args=(file_path, filetype, chat_id))
-            p_send.start()
-            p_send.join()
-            # send_file(file_path, filetype, chat_id)
             os.remove(f'./rec_files/{filename}')
-            os.remove(file_path)
-
+            try:
+                send_file(file_path, filetype, chat_id)
+                os.remove(file_path)
+            except FileNotFoundError:
+                print("[ERROR] File not found")
+                send_message(chat_id, "There was an error processing the file")
 
 def server(args):
 
@@ -105,7 +104,6 @@ def server(args):
         print(f'[WAITING] Server is waiting for connections on {HOST}:{PORT}')
 
         server.serve_forever()
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -117,7 +115,6 @@ if __name__ == "__main__":
 
     # Inicia el servidor en un proceso hijo
     #! Mejorar manejo de errores
-    #! Modularizar
     #! Que el proceso padre se quede esperando conexiones, y el hijo procese la queue, tener dos hijos es redundante
     server_process = multiprocessing.Process(target=server, args=(args,))
     server_process.start()

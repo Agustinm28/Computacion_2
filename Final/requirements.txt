@@ -1,4 +1,3 @@
-opencv-python
 numpy
 telegram
 python-telegram-bot
@@ -7,3 +6,4 @@ Pillow
 moviepy
 ffprobe-python
 ffmpeg-python
+replicate
