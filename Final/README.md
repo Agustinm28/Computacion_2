@@ -1,5 +1,5 @@
 # Final Computacion II
-Repositorio para el final de computacion II.
+Repositorio para el final de Computacion II.
 Link del bot de Telegram: t.me/uppy28bot
 
 <h2 style="color:blue;">Programa</h2>
