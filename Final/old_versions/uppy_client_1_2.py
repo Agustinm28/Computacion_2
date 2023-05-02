@@ -1,10 +1,9 @@
 import logging
 import socket
 import subprocess
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, Poll, PollOption, KeyboardButton, KeyboardButtonPollType, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, Poll, PollOption
 import telegram
-from telegram.ext import filters, ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, Application, PollAnswerHandler, PollHandler, filters, CallbackQueryHandler
-from telegram.constants import ParseMode
+from telegram.ext import filters, ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler
 import asyncio
 import argparse
 import os
@@ -78,7 +77,7 @@ async def receive_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Envia el video al servidor para ser procesado
     await context.bot.send_message(chat_id=update.effective_chat.id, text="Video uploaded correctly")
-    await send_file(file=video_path, scale_method=None)
+    send_file(file=video_path)
 
 async def receive_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -100,37 +99,9 @@ async def receive_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.error(e)
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Error processing image")
 
+    # Envia la imagen al servidor para ser procesado
     await context.bot.send_message(chat_id=update.effective_chat.id, text="Image uploaded correctly")
-
-    # Keyboard inline para seleccionar metodo de escalado
-    keyboard = [
-            [InlineKeyboardButton("Interpolation", callback_data=f"0_{image_path}")],
-            [InlineKeyboardButton("AI", callback_data=f"1_{image_path}")],
-        ]
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    await update.message.reply_text("Select a upscale method:", reply_markup=reply_markup)
-
-async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    #Handler encargado de esperar una respuesta para el Keyboard inline
-    query = update.callback_query
-    await query.answer()
-    scale = query.data
-
-    # Obtiene el file path y metodo de escalado del callback_data
-    scale_data = scale.split('_', 1)
-    scale_method = int(scale_data[0])
-    file_path = scale_data[1]
-    if scale_method == 0:
-        scale_type = "Interpolation"
-    else:
-        scale_type = "AI"
-    await query.edit_message_text(text=f"Upscale method: {scale_type}")
-
-    # Envia la imagen al servidor para ser procesada
-    await send_file(file=file_path, scale_method=scale_method)
-
+    send_file(file=image_path)
 
 async def receive_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -154,7 +125,7 @@ async def receive_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Envia el archivo al servidor para ser procesado
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Video uploaded correctly")
-        await send_file(file=file_path, scale_method=None)
+        send_file(file=file_path)
     elif file.mime_type.startswith('image/'):
         # Verificar tamaño del archivo
         if file.file_size > 20 * 1024 * 1024:
@@ -171,28 +142,21 @@ async def receive_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(chat_id=update.effective_chat.id, text="Error processing image")
 
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Image uploaded correctly")
-
-        # Keyboard inline para seleccionar metodo de escalado
-        keyboard = [
-                [InlineKeyboardButton("Interpolation", callback_data=f"0_{file_path}")],
-                [InlineKeyboardButton("AI", callback_data=f"1_{file_path}")],
-            ]
-
-        reply_markup = InlineKeyboardMarkup(keyboard)
-
-        await update.message.reply_text("Select a upscale method:", reply_markup=reply_markup)
+        send_file(file=file_path)
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="File type not recognized")
         return
 
-async def send_file(file, scale_method):
+
+def send_file(file):
     HOST, PORT = args.ip, int(args.port)
 
     with open(file, "rb") as f:
         print("[SERIALIZING] Loading object") 
         filename = os.path.basename(file)
         file_data = f.read()
-        file_obj = {'filename':filename, 'data':file_data, 'scale':scale_method}
+        #file_size = len(file_data)
+        file_obj = {'filename':filename, 'data':file_data}
         file_pickle = pickle.dumps(file_obj) 
         print("[SERIALIZING] Pickle object loaded")
         f.close()
@@ -215,14 +179,11 @@ if __name__ == '__main__':
     
     start_handler = CommandHandler('start', start)
     help_handler = CommandHandler('help', help)
-    button_handler = CallbackQueryHandler(button)
 
     application.add_handler(start_handler)
     application.add_handler(help_handler)
-    application.add_handler(button_handler)
     application.add_handler(MessageHandler(filters.VIDEO, receive_video))
     application.add_handler(MessageHandler(filters.PHOTO, receive_image))
     application.add_handler(MessageHandler(filters.ATTACHMENT, receive_file))
-    
     
     application.run_polling()

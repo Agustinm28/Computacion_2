@@ -3,7 +3,7 @@ import socket
 import subprocess
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, Poll, PollOption, KeyboardButton, KeyboardButtonPollType, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup
 import telegram
-from telegram.ext import filters, ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, Application, PollAnswerHandler, PollHandler, filters, CallbackQueryHandler
+from telegram.ext import filters, ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, Application, PollAnswerHandler, PollHandler, filters
 from telegram.constants import ParseMode
 import asyncio
 import argparse
@@ -102,34 +102,26 @@ async def receive_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(chat_id=update.effective_chat.id, text="Image uploaded correctly")
 
-    # Keyboard inline para seleccionar metodo de escalado
-    keyboard = [
-            [InlineKeyboardButton("Interpolation", callback_data=f"0_{image_path}")],
-            [InlineKeyboardButton("AI", callback_data=f"1_{image_path}")],
-        ]
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    await update.message.reply_text("Select a upscale method:", reply_markup=reply_markup)
-
-async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    #Handler encargado de esperar una respuesta para el Keyboard inline
-    query = update.callback_query
-    await query.answer()
-    scale = query.data
-
-    # Obtiene el file path y metodo de escalado del callback_data
-    scale_data = scale.split('_', 1)
-    scale_method = int(scale_data[0])
-    file_path = scale_data[1]
-    if scale_method == 0:
-        scale_type = "Interpolation"
-    else:
-        scale_type = "AI"
-    await query.edit_message_text(text=f"Upscale method: {scale_type}")
-
-    # Envia la imagen al servidor para ser procesada
-    await send_file(file=file_path, scale_method=scale_method)
+    # Aqui necesito que aparezca la encuensta para saber que hacer con la imagen
+    questions = ["Interpolation", "AI"]
+    message = await context.bot.send_poll(
+        chat_id,
+        "Select a upscale method:",
+        questions,
+        is_anonymous=False,
+        allows_multiple_answers=False,
+    )
+    # Save some info about the poll the bot_data for later use in receive_poll_answer
+    payload = {
+        message.poll.id: {
+            "questions": questions,
+            "message_id": message.message_id,
+            "chat_id": chat_id,
+            "answers": 0,
+            "image_path": image_path
+        }
+    }
+    context.bot_data.update(payload)
 
 
 async def receive_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -172,18 +164,46 @@ async def receive_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Image uploaded correctly")
 
-        # Keyboard inline para seleccionar metodo de escalado
-        keyboard = [
-                [InlineKeyboardButton("Interpolation", callback_data=f"0_{file_path}")],
-                [InlineKeyboardButton("AI", callback_data=f"1_{file_path}")],
-            ]
-
-        reply_markup = InlineKeyboardMarkup(keyboard)
-
-        await update.message.reply_text("Select a upscale method:", reply_markup=reply_markup)
+        # Aqui necesito que aparezca la encuensta para saber que hacer con la imagen
+        questions = ["Interpolation", "AI"]
+        message = await context.bot.send_poll(
+            chat_id,
+            "Select a upscale method:",
+            questions,
+            is_anonymous=False,
+            allows_multiple_answers=False,
+        )
+        # Save some info about the poll the bot_data for later use in receive_poll_answer
+        payload = {
+            message.poll.id: {
+                "questions": questions,
+                "message_id": message.message_id,
+                "chat_id": chat_id,
+                "answers": 0,
+                "image_path": file_path
+            }
+        }
+        context.bot_data.update(payload)
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="File type not recognized")
         return
+
+async def receive_poll_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Save a user's poll vote and send the image file"""
+    answer = update.poll_answer
+    poll_id = answer.poll_id
+    # Get the poll from the bot_data
+    poll = context.bot_data.get(poll_id)
+    # If the poll is not found, return
+    if poll is None:
+        return
+    # Get the selected option ids
+    selected_options = answer.option_ids
+    option = selected_options[0]
+    # Get the image path from the poll
+    image_path = poll["image_path"]
+    # Send the image file to be processed
+    await send_file(file=image_path, scale_method=option)
 
 async def send_file(file, scale_method):
     HOST, PORT = args.ip, int(args.port)
@@ -215,11 +235,11 @@ if __name__ == '__main__':
     
     start_handler = CommandHandler('start', start)
     help_handler = CommandHandler('help', help)
-    button_handler = CallbackQueryHandler(button)
+    poll_answer = PollAnswerHandler(receive_poll_answer)
 
     application.add_handler(start_handler)
     application.add_handler(help_handler)
-    application.add_handler(button_handler)
+    application.add_handler(poll_answer)
     application.add_handler(MessageHandler(filters.VIDEO, receive_video))
     application.add_handler(MessageHandler(filters.PHOTO, receive_image))
     application.add_handler(MessageHandler(filters.ATTACHMENT, receive_file))

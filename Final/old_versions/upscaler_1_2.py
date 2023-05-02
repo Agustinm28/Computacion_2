@@ -1,7 +1,6 @@
 from multiprocessing import Manager
 import os
 from queue import Queue
-import subprocess
 import cv2
 from tqdm import tqdm
 from PIL import Image
@@ -16,7 +15,6 @@ import requests
 from PIL import Image
 import replicate
 from telegram_sender import send_message, send_file
-from compresser import compress_image, compress_video
 
 # Modulo destinado a escalar imagenes y video por interpolado de pixeles o mediante IA con ESRGAN
 
@@ -95,7 +93,7 @@ def scale_image_ia(filename):
         send_message(chat_id, "Scaling Image (AI)...")
         output_image = replicate.run(
             "nightmareai/real-esrgan:42fed1c4974146d4d2414e2be2c5277c7fcf05fcc3a73abf41610695738c1d7b",
-            input={"image": input_file, "face_enhance":False}
+            input={"image": input_file}
         )
 
         # Descargar la imagen desde la URL
@@ -132,18 +130,14 @@ def scale_video(filename, scale):
     nuevo_alto = alto * escala
 
     # Definir el codec y el nombre del nuevo video
+    # ? Solucion a cv2 no localizando el codec h264 -> Instalar opencv desde sudo apt-get, luego hacer sudo apt-get update y upgrade
     fourcc = cv2.VideoWriter_fourcc(*"avc1")  # Codec H264 (avc1), H265 (hvc1)
     os.makedirs('./upscaled_files/', exist_ok=True)
     out = cv2.VideoWriter(f"./upscaled_files/upscaled_{filename}", fourcc, 30.0, (nuevo_ancho, nuevo_alto))
 
-    # Obtener chat_id del usuario a partir del filename
+    # Leer cada frame del video original y escalarlo
     chat_id = int((filename.split("_"))[0])
     send_message(chat_id, "Scaling Video...")
-
-    # Usar ffmpeg para extraer el audio del video original
-    subprocess.run(["ffmpeg", "-i", video_path, "-vn", "-acodec", "copy", "audio.aac"])
-
-    # Leer cada frame del video original y escalarlo
     while True:
         ret, frame = cap.read()
         if ret:
@@ -175,26 +169,61 @@ def scale_video(filename, scale):
     # Liberar los recursos
     cap.release()
     out.release()
-
-    # Usar ffmpeg para aplicar el audio al nuevo video escalado
-    export_path = f"./upscaled_files/upscaled_{filename}"
-    output = f"./upscaled_files/a_upscaled_{filename}"
-    subprocess.run(["ffmpeg", "-v", "quiet", "-stats", "-i", export_path, "-i", "audio.aac", "-c:v", "copy", "-c:a", "aac", "-map", "0:v:0", "-map", "1:a:0", "-y", output])
-
     cv2.destroyAllWindows()
 
+    export_path = f"./upscaled_files/upscaled_{filename}"
+    max_size = 50 * 1024 * 1024
+
+    if os.path.getsize(export_path) > max_size:
+        send_message(chat_id, "Compressing video, this may take a while...")
+        compress_video(filename, export_path, max_size)
+
+# Algoritmos de compresion para lograr que los archivos pesen menos de 50 MB
+
+
+def compress_video(filename, export_path, max_size):
+    print(f'[COMPRESSION] File is larger than 50MB ({os.path.getsize(export_path) // (1024 * 1024)}MB), starting compression')
+
+    # Compresion inicial con H265 codec
+    print(f'[COMPRESSION] Writing with H265 codec, this may take a while...')
+
+    # Crear un objeto FFmpeg para el archivo de entrada
+    input_stream = ffmpeg.input(export_path)
+
+    # Configurar el códec H.265 para el archivo de salida
+    output = f"./upscaled_files/c_upscaled_{filename}"
+    output_stream = ffmpeg.output(input_stream, output, vcodec='libx265')
+
+    # Agregar el argumento "-hide_banner" para evitar que FFmpeg imprima información en pantalla
+    output_stream = output_stream.global_args('-hide_banner')
+
+    # Agregar el argumento "-loglevel" para mostrar la menor cantidad de información posible
+    output_stream = output_stream.global_args('-loglevel', 'quiet')
+
+    # Ejecutar el proceso de codificación
+    ffmpeg.run(output_stream)
     os.remove(export_path)
     os.rename(output, export_path)
+    print(
+        f'[COMPRESSION] Writing finalized: ({os.path.getsize(export_path) // (1024 * 1024)}MB)')
 
-    try:
-        os.remove("audio.aac")
-    except OSError as e:
-        print(f"Error: {e.filename} - {e.strerror}.")
-    
-    # Comprime el video si pesa mas de 50MB
-    max_size = 50 * 1024 * 1024
+    # Compresion mas agresiva en caso de que siga pesando mas de 50 MB
     if os.path.getsize(export_path) > max_size:
-        input_path = f"./upscaled_files/upscaled_{filename}"
-        output_path = f"./upscaled_files/c_upscaled_{filename}"
-        send_message(chat_id, "Compressing video, this may take a while...")
-        compress_video(input_path, output_path, 50) 
+        print(
+            f'[COMPRESSION] File is still larger than 50MB ({os.path.getsize(export_path) // (1024 * 1024)}MB), starting agresive compression')
+        # Cargar archivo
+        clip = VideoFileClip(export_path)
+
+        # Establecer la tasa de bits objetivo
+        new_bitrate = f"{int((50 * 8 * 1000) / clip.duration)}k"
+
+        # Compresion a nueva tasa de bits
+        print(f'[COMPRESSION] Compressing file')
+        clip.write_videofile(export_path, bitrate=new_bitrate)
+
+
+def compress_image(export_path):
+    print(
+        f"[COMPRESSION] The file is too large {os.path.getsize(export_path)}")
+    img = Image.open(export_path)
+    img.save(export_path, "JPEG", quality=90, optimize=True)

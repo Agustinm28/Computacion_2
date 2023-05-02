@@ -54,6 +54,7 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
         # Escribir el archivo en el disco
         filename = file_obj['filename']
         file_data = file_obj['data']
+        scale_method = file_obj['scale']
         print(f'[SAVING] Saving file locally')
         os.makedirs('./rec_files/', exist_ok=True)
         with open('./rec_files/' + filename, 'wb') as f:
@@ -62,30 +63,39 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
         self.request.close()
 
         print(f'[PROCESSING] Sending to queue')
-        queue.put_nowait(filename)
+        queue.put_nowait((filename, scale_method))
 
 
 def process_queue():
     while True:
         while not queue.empty():
-            filename = queue.get_nowait()
+            filename, scale_method = queue.get_nowait()
             filetype, encoding = mimetypes.guess_type(filename)
             print(f'[PROCESSING] Processing file {filename}...')
+            print(f"[TESTING] Scale method set to {scale_method} with type {type(scale_method)}")
             if filetype.startswith('video/'):
-                # Procesado de Video
+                # Se genera un proceso hijo para procesar el video
                 p_image = multiprocessing.Process(
                     target=scale_video, args=(filename, 2))
                 print(f'[PROCESSING] Generating son process for {filename}')
                 p_image.start()
                 p_image.join()
             else:
-                # Procesado de imagen
-                # * Cambiar por scale_image_ia y borrar el 2 (dejar la coma), para escalar con ia
-                p_image = multiprocessing.Process(
-                    target=scale_image, args=(filename, 2))
-                print(f'[PROCESSING] Generating son process for {filename}')
-                p_image.start()
-                p_image.join()
+                # Se genera un proceso hijo para procesar la imagen
+                if scale_method == 0:
+                    #Procesar imagen con Interpolado de pixeles
+                    p_image = multiprocessing.Process(
+                        target=scale_image, args=(filename, 2))
+                    print(f'[PROCESSING] Generating son process for {filename}')
+                    p_image.start()
+                    p_image.join()
+                elif scale_method == 1:
+                    # Procesar imagen con AI
+                    p_image = multiprocessing.Process(
+                        target=scale_image_ia, args=(filename,))
+                    print(f'[PROCESSING] Generating son process for {filename}')
+                    p_image.start()
+                    p_image.join()
             print(f'[PROCESSING] File {filename} processed')
             file_path = f'./upscaled_files/upscaled_{filename}'
             chat_id = int((filename.split("_"))[0])
@@ -96,8 +106,8 @@ def process_queue():
                 os.remove(file_path)
             except FileNotFoundError:
                 print("[ERROR] File not found")
-                send_message(chat_id, "There was an error processing the file")
-
+                send_message(chat_id, "There was an error processing the file.")
+                send_message(chat_id, "The image must not exceed 1280x1280 resolution. Try to send it as a photo, not as a document.")
 
 def server(args):
 
@@ -131,6 +141,5 @@ if __name__ == "__main__":
 
     # Espera a que los procesos hijos terminen
     queue_process.join()
-    # server_process.join()
 
     print('[PROCESSING] All processes finished.')
