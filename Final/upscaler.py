@@ -143,8 +143,15 @@ def scale_video(filename, scale):
         if ret:
             pbar.update(1)
             # Escalar el frame con interpolación lanczos
-            frame_escalado = cv2.resize(
-                frame, (nuevo_ancho, nuevo_alto), interpolation=cv2.INTER_LANCZOS4)
+            frame_escalado = cv2.resize(frame, (nuevo_ancho, nuevo_alto), interpolation=cv2.INTER_LANCZOS4)
+            # Aplicar filtro de reduccion de ruido bilateral
+            frame_escalado = cv2.bilateralFilter(frame_escalado, 7, 50, 50)
+            # Shapening de bordes con filtro de unsharp mask
+            sigma = 1
+            amount = 1.5
+            threshold = 0
+            blurred = cv2.GaussianBlur(frame_escalado, (0, 0), sigma)
+            frame_escalado = cv2.addWeighted(frame_escalado, 1 + amount, blurred, -amount, threshold)
             # Escribir el frame escalado en el nuevo video
             out.write(frame_escalado)
         else:
@@ -168,6 +175,7 @@ def scale_video(filename, scale):
     max_size = 50 * 1024 * 1024
 
     if os.path.getsize(export_path) > max_size:
+        send_message(chat_id, "Compressing video, this may take a while...")
         compress_video(filename, export_path, max_size)
 
 # Algoritmos de compresion para lograr que los archivos pesen menos de 50 MB
