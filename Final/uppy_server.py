@@ -64,6 +64,7 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
         print(f'[PROCESSING] Sending to queue')
         queue.put_nowait(filename)
 
+
 def process_queue():
     while True:
         while not queue.empty():
@@ -79,8 +80,9 @@ def process_queue():
                 p_image.join()
             else:
                 # Procesado de imagen
+                # * Cambiar por scale_image_ia y borrar el 2 (dejar la coma), para escalar con ia
                 p_image = multiprocessing.Process(
-                    target=scale_image_ia, args=(filename,))
+                    target=scale_image, args=(filename, 2))
                 print(f'[PROCESSING] Generating son process for {filename}')
                 p_image.start()
                 p_image.join()
@@ -96,6 +98,7 @@ def process_queue():
                 print("[ERROR] File not found")
                 send_message(chat_id, "There was an error processing the file")
 
+
 def server(args):
 
     HOST, PORT = args.ip, args.port
@@ -105,6 +108,7 @@ def server(args):
 
         server.serve_forever()
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-ip', type=str, default='127.0.0.1',
@@ -113,20 +117,20 @@ if __name__ == "__main__":
                         help='Port of the process server')
     args = parser.parse_args()
 
-    # Inicia el servidor en un proceso hijo
     #! Mejorar manejo de errores
-    #! Que el proceso padre se quede esperando conexiones, y el hijo procese la queue, tener dos hijos es redundante
-    server_process = multiprocessing.Process(target=server, args=(args,))
-    server_process.start()
-    print(f'[PROCESSING] Started server process {server_process.pid}...')
+    #! Agregar soporte IPv6
 
-    # Procesa la cola en otro proceso hijo
+    # Procesa la cola en un proceso hijo
     queue_process = multiprocessing.Process(target=process_queue)
     queue_process.start()
     print(f'[PROCESSING] Started queue process {queue_process.pid}...')
 
+    # Inicia el servidor y se queda esperando conexiones en el proceso padre
+    print(f'[PROCESSING] Started server process')
+    server(args)
+
     # Espera a que los procesos hijos terminen
     queue_process.join()
-    server_process.join()
+    # server_process.join()
 
     print('[PROCESSING] All processes finished.')

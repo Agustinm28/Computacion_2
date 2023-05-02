@@ -1,6 +1,8 @@
 from multiprocessing import Manager
 import os
 from queue import Queue
+
+import numpy
 import cv2
 from tqdm import tqdm
 from PIL import Image
@@ -23,6 +25,7 @@ with open('./data/REPLICATE_KEY.txt', 'r') as f:
     token = str(f.read())
 os.environ["REPLICATE_API_TOKEN"] = token
 
+
 def scale_image(filename, scale):
     # Se especifica el path de la imagen recibida y se convierte a color
     image_path = f'./rec_files/{filename}'
@@ -38,8 +41,23 @@ def scale_image(filename, scale):
     chat_id = int((filename.split("_"))[0])
     # Se envia mensaje de inicio de escalado y se escala
     send_message(chat_id, "Scaling Image...")
-    imagen_escalada = cv2.resize(image, (nuevo_ancho, nuevo_alto), interpolation=cv2.INTER_LANCZOS4)
+    imagen_escalada = cv2.resize(
+        image, (nuevo_ancho, nuevo_alto), interpolation=cv2.INTER_LANCZOS4)
     print(f"[SCALING] {filename} scaling finished")
+
+    # Aplicar filtro de reduccion de ruido bilateral
+    print(f"[DENOISING] {filename} denoising image")
+    imagen_escalada = cv2.bilateralFilter(imagen_escalada, 7, 50, 50)
+    print(f"[DENOISING] {filename} denoising finished")
+
+    # Shapening de bordes con filtro de unsharp mask
+    print(f"[SHARPENING] {filename} sharpening image")
+    sigma = 1
+    amount = 1.5
+    threshold = 0
+    blurred = cv2.GaussianBlur(imagen_escalada, (0, 0), sigma)
+    imagen_escalada = cv2.addWeighted(imagen_escalada, 1 + amount, blurred, -amount, threshold)
+    print(f"[SHARPENING] {filename} sharpening finished")
 
     # Exportar la imagen escalada localmente
     print(f"[SCALING] {filename} exporting")
@@ -52,7 +70,8 @@ def scale_image(filename, scale):
     print(f'Resolucion de entrada: {alto}x{ancho}')
     print(f'Razon de escala: x{scale}')
     print(f'Resolucion de salida: {nuevo_alto}x{nuevo_ancho}')
-    send_message(chat_id, f"Scaling finished, output resolution: {nuevo_ancho}x{nuevo_alto}")
+    send_message(
+        chat_id, f"Scaling finished, output resolution: {nuevo_ancho}x{nuevo_alto}")
 
     # Algoritmo de compresion para lograr que pese menos de 50 MB
     max_size = 50 * 1024 * 1024
@@ -62,12 +81,13 @@ def scale_image(filename, scale):
     cv2.waitKey(1000)
     cv2.destroyAllWindows()
 
+
 def scale_image_ia(filename):
     try:
         # Cargar la imagen de entrada
         image_path = f'./rec_files/{filename}'
         input_image = PIL.Image.open(image_path)
-        
+
         input_file = io.BytesIO()
         input_image.save(input_file, format="JPEG")
 
@@ -85,6 +105,7 @@ def scale_image_ia(filename):
         output_image.save(f"./upscaled_files/upscaled_{filename}")
     except replicate.exceptions.ModelError:
         print("[ERROR] API Out of memory")
+
 
 def scale_video(filename, scale):
     # Abrir el video original
@@ -151,8 +172,10 @@ def scale_video(filename, scale):
 
 # Algoritmos de compresion para lograr que los archivos pesen menos de 50 MB
 
+
 def compress_video(filename, export_path, max_size):
-    print(f'[COMPRESSION] File is larger than 50MB ({os.path.getsize(export_path) // (1024 * 1024)}MB), starting compression')
+    print(
+        f'[COMPRESSION] File is larger than 50MB ({os.path.getsize(export_path) // (1024 * 1024)}MB), starting compression')
 
     # Compresion inicial con H265 codec
     print(f'[COMPRESSION] Writing with H265 codec, this may take a while...')
@@ -191,7 +214,9 @@ def compress_video(filename, export_path, max_size):
         print(f'[COMPRESSION] Compressing file')
         clip.write_videofile(export_path, bitrate=new_bitrate)
 
+
 def compress_image(export_path):
-    print(f"[COMPRESSION] The file is too large {os.path.getsize(export_path)}")
+    print(
+        f"[COMPRESSION] The file is too large {os.path.getsize(export_path)}")
     img = Image.open(export_path)
     img.save(export_path, "JPEG", quality=90, optimize=True)
