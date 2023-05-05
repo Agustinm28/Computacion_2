@@ -1,3 +1,5 @@
+import re
+import socket
 import socketserver
 import argparse
 from multiprocessing import Manager
@@ -16,8 +18,12 @@ manager = Manager()  # Creamos una cola compartida para comunicarse con los proc
 queue = manager.Queue()
 
 
-class ForkedTCPServer(socketserver.ForkingMixIn, socketserver.TCPServer):
+class ForkedTCPServer4(socketserver.ForkingMixIn, socketserver.TCPServer):
+    address_family = socket.AF_INET
     pass
+
+class ForkedTCPServer6(socketserver.ForkingMixIn, socketserver.TCPServer):
+    address_family = socket.AF_INET6
 
 
 class TCPRequestHandler(socketserver.BaseRequestHandler):
@@ -113,10 +119,21 @@ def server(args):
 
     HOST, PORT = args.ip, args.port
 
-    with ForkedTCPServer((HOST, PORT), TCPRequestHandler) as server:
-        print(f'[WAITING] Server is waiting for connections on {HOST}:{PORT}')
+    with open('./data/ipv4.txt', 'r') as f:
+        ipv4 = str(f.read())
+    with open('./data/ipv6.txt', 'r') as f:
+        ipv6 = str(f.read())
 
-        server.serve_forever()
+    if re.search(ipv6, args.ip):
+        with ForkedTCPServer6((HOST, PORT), TCPRequestHandler) as server:
+            print(f'[WAITING] Server is waiting for connections on {HOST}:{PORT}')
+
+            server.serve_forever()
+    elif re.search(ipv4, args.ip):
+        with ForkedTCPServer4((HOST, PORT), TCPRequestHandler) as server:
+            print(f'[WAITING] Server is waiting for connections on {HOST}:{PORT}')
+
+            server.serve_forever()
 
 
 if __name__ == "__main__":

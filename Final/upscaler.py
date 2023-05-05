@@ -140,8 +140,17 @@ def scale_video(filename, scale):
     chat_id = int((filename.split("_"))[0])
     send_message(chat_id, "Scaling Video...")
 
+    # Get the output of ffprobe as a string
+    output_audio = subprocess.run(["ffprobe", "-show_streams", video_path], capture_output=True, text=True).stdout
+
     # Usar ffmpeg para extraer el audio del video original
-    subprocess.run(["ffmpeg", "-i", video_path, "-vn", "-acodec", "copy", "audio.aac"])
+    # Check if the output contains the word "audio"
+    if "audio" in output_audio:
+        # The video has audio, extract it
+        subprocess.run(["ffmpeg", "-i", video_path, "-vn", "-acodec", "copy", "audio.aac"])
+    else:
+        # The video has no audio, do nothing
+        print("[PROCESS] The video has no audio")
 
     # Leer cada frame del video original y escalarlo
     while True:
@@ -176,15 +185,20 @@ def scale_video(filename, scale):
     cap.release()
     out.release()
 
-    # Usar ffmpeg para aplicar el audio al nuevo video escalado
     export_path = f"./upscaled_files/upscaled_{filename}"
     output = f"./upscaled_files/a_upscaled_{filename}"
-    subprocess.run(["ffmpeg", "-v", "quiet", "-stats", "-i", export_path, "-i", "audio.aac", "-c:v", "copy", "-c:a", "aac", "-map", "0:v:0", "-map", "1:a:0", "-y", output])
+    # Usar ffmpeg para aplicar el audio al nuevo video escalado
+    # Check if the audio file exists
+    if os.path.exists("audio.aac"):
+        # The audio file exists, apply it to the new video
+        subprocess.run(["ffmpeg", "-v", "quiet", "-stats", "-i", export_path, "-i", "audio.aac", "-c:v", "copy", "-c:a", "aac", "-map", "0:v:0", "-map", "1:a:0", "-y", output])
+        os.remove(export_path)
+        os.rename(output, export_path)
+    else:
+        # The audio file does not exist, do nothing or handle the case
+        print("[PROCESS] The audio file does not exist")
 
     cv2.destroyAllWindows()
-
-    os.remove(export_path)
-    os.rename(output, export_path)
 
     try:
         os.remove("audio.aac")

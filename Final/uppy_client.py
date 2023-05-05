@@ -1,4 +1,5 @@
 import logging
+import re
 import socket
 import subprocess
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, Poll, PollOption, KeyboardButton, KeyboardButtonPollType, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup
@@ -188,6 +189,11 @@ async def receive_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def send_file(file, scale_method):
     HOST, PORT = args.ip, int(args.port)
 
+    with open('./data/ipv4.txt', 'r') as f:
+        ipv4 = str(f.read())
+    with open('./data/ipv6.txt', 'r') as f:
+        ipv6 = str(f.read())
+
     with open(file, "rb") as f:
         print("[SERIALIZING] Loading object") 
         filename = os.path.basename(file)
@@ -197,13 +203,22 @@ async def send_file(file, scale_method):
         print("[SERIALIZING] Pickle object loaded")
         f.close()
 
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.connect((HOST, PORT))
-        print(f"[CONNECT] Conexion establecida con {HOST} en el puerto {PORT}")
-        print("[SENDING FILE]")        
-        sock.sendall(file_pickle)
-        sock.close()
-        os.remove(file)
+    if re.search(ipv6, args.ip):
+        with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as sock:
+            sock.connect((HOST, PORT))
+            print(f"[CONNECT] Conexion establecida con {HOST} en el puerto {PORT}")
+            print("[SENDING FILE]")        
+            sock.sendall(file_pickle)
+            sock.close()
+            os.remove(file)
+    elif re.search(ipv4, args.ip):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.connect((HOST, PORT))
+            print(f"[CONNECT] Conexion establecida con {HOST} en el puerto {PORT}")
+            print("[SENDING FILE]")        
+            sock.sendall(file_pickle)
+            sock.close()
+            os.remove(file)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Telegram Bot')
