@@ -109,7 +109,6 @@ def scale_image_ia(filename):
     except replicate.exceptions.ModelError:
         print("[ERROR] API Out of memory")
 
-
 def scale_video(filename, scale):
     # Abrir el video original
     video_path = f'./rec_files/{filename}'
@@ -159,6 +158,7 @@ def scale_video(filename, scale):
             pbar.update(1)
             # Escalar el frame con interpolación lanczos
             frame_escalado = cv2.resize(frame, (nuevo_ancho, nuevo_alto), interpolation=cv2.INTER_LANCZOS4)
+            frame
             # Aplicar filtro de reduccion de ruido bilateral
             frame_escalado = cv2.bilateralFilter(frame_escalado, 7, 50, 50)
             # Shapening de bordes con filtro de unsharp mask

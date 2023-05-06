@@ -2,7 +2,7 @@ import logging
 import re
 import socket
 import subprocess
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, Poll, PollOption, KeyboardButton, KeyboardButtonPollType, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, Poll, PollOption, KeyboardButton, KeyboardButtonPollType, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup, Bot
 import telegram
 from telegram.ext import filters, ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, Application, PollAnswerHandler, PollHandler, filters, CallbackQueryHandler
 from telegram.constants import ParseMode
@@ -31,7 +31,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=chat_id, text="Hi! I have saved the chat_id for this chat.")
 
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.effective_chat.id, text="start - Set the chat_id so that the bot can send you messages\nhelp - Tells you the bot commands\nscale - Set scale reason (2 default)")
+    await context.bot.send_message(chat_id=update.effective_chat.id, parse_mode = 'html', text="<b>start</b> - Set the chat_id so that the bot can send you messages\n<b>help</b> - Tells you the bot commands\n<b>scale</b> - Tells you info about scale methods")
+
+async def scale(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await context.bot.send_message(chat_id=update.effective_chat.id, parse_mode = 'html', text=f"- <b>Interpolation</b>: applies the Lanczos4 interpolation method which uses a cubic function to calculate the new pixel values from the existing ones. This method scales the image by a factor of x2. Available for image and video.\n- <b>AI</b>: It uses the ESRGAN model which makes use of a deep neural network to scale images. This method scales the image by a factor of x4. Available only for images.")
 
 async def get_me():
     bot = telegram.Bot(token)
@@ -230,11 +233,13 @@ if __name__ == '__main__':
     
     start_handler = CommandHandler('start', start)
     help_handler = CommandHandler('help', help)
+    scale_handler = CommandHandler('scale', scale)
     button_handler = CallbackQueryHandler(button)
 
     application.add_handler(start_handler)
     application.add_handler(help_handler)
     application.add_handler(button_handler)
+    application.add_handler(scale_handler)
     application.add_handler(MessageHandler(filters.VIDEO, receive_video))
     application.add_handler(MessageHandler(filters.PHOTO, receive_image))
     application.add_handler(MessageHandler(filters.ATTACHMENT, receive_file))

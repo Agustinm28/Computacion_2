@@ -113,7 +113,6 @@ def process_queue():
             except FileNotFoundError:
                 print("[ERROR] File not found")
                 send_message(chat_id, "There was an error processing the file.")
-                send_message(chat_id, "The image must not exceed 1280x1280 resolution. Try to send it as a photo, not as a document.")
 
 def server(args):
 
@@ -145,7 +144,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     #! Mejorar manejo de errores
-    #! Agregar soporte IPv6
+    #! Agregar soporte IPv6 - Checkear
 
     # Procesa la cola en un proceso hijo
     queue_process = multiprocessing.Process(target=process_queue)
