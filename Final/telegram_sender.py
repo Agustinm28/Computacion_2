@@ -6,9 +6,12 @@ with open('./data/BOT_CREDENTIALS.txt', 'r') as f:
     token = str(f.read())
 
 def send_message(chat_id, message):
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-    data = {"chat_id": chat_id, "text": message}
-    response = requests.post(url, data=data)
+    try:
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        data = {"chat_id": chat_id, "text": message}
+        response = requests.post(url, data=data)
+    except requests.exceptions.RequestException as e:
+        print(f"Error sending the message: {e}")
 
 def send_file(file_path, filetype, chat_id):
     try:

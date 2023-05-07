@@ -197,31 +197,43 @@ async def send_file(file, scale_method):
     with open('./data/ipv6.txt', 'r') as f:
         ipv6 = str(f.read())
 
-    with open(file, "rb") as f:
-        print("[SERIALIZING] Loading object") 
-        filename = os.path.basename(file)
-        file_data = f.read()
-        file_obj = {'filename':filename, 'data':file_data, 'scale':scale_method}
-        file_pickle = pickle.dumps(file_obj) 
-        print("[SERIALIZING] Pickle object loaded")
-        f.close()
+    try:
+        with open(file, "rb") as f:
+            print("[SERIALIZING] Loading object") 
+            filename = os.path.basename(file)
+            file_data = f.read()
+            file_obj = {'filename':filename, 'data':file_data, 'scale':scale_method}
+            file_pickle = pickle.dumps(file_obj) 
+            print("[SERIALIZING] Pickle object loaded")
+            f.close()
+    except IOError as e:
+        print(f"[ERROR] Could not read file: {e}")
+        return
 
-    if re.search(ipv6, args.ip):
-        with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as sock:
-            sock.connect((HOST, PORT))
-            print(f"[CONNECT] Conexion establecida con {HOST} en el puerto {PORT}")
-            print("[SENDING FILE]")        
-            sock.sendall(file_pickle)
-            sock.close()
-            os.remove(file)
-    elif re.search(ipv4, args.ip):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.connect((HOST, PORT))
-            print(f"[CONNECT] Conexion establecida con {HOST} en el puerto {PORT}")
-            print("[SENDING FILE]")        
-            sock.sendall(file_pickle)
-            sock.close()
-            os.remove(file)
+    try:
+        if re.search(ipv6, args.ip):
+            with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as sock:
+                sock.connect((HOST, PORT))
+                print(f"[CONNECT] Conexion establecida con {HOST} en el puerto {PORT}")
+                print("[SENDING FILE]")        
+                sock.sendall(file_pickle)
+                sock.close()
+                os.remove(file)
+        elif re.search(ipv4, args.ip):
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.connect((HOST, PORT))
+                print(f"[CONNECT] Conexion establecida con {HOST} en el puerto {PORT}")
+                print("[SENDING FILE]")        
+                sock.sendall(file_pickle)
+                sock.close()
+                try:
+                    os.remove(file)
+                except Exception as e:
+                    print(f"[ERROR] Could not delete file: {e}")
+    except ConnectionError as e:
+        print(f"[ERROR] Could not connect to server: {e}")
+    except Exception as e:
+        print(f"[ERROR] Unknown error occurred: {e}")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Telegram Bot')

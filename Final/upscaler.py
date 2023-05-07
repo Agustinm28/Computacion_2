@@ -29,56 +29,73 @@ os.environ["REPLICATE_API_TOKEN"] = token
 def scale_image(filename, scale):
     # Se especifica el path de la imagen recibida y se convierte a color
     image_path = f'./rec_files/{filename}'
-    image = cv2.imread(image_path, cv2.IMREAD_COLOR)
-    # Leer la resolución de entrada de la imagen
-    alto, ancho = image.shape[:2]
-    # Duplicar la resolución de la imagen
-    nuevo_alto = alto * scale
-    nuevo_ancho = ancho * scale
-
-    # Escalar la imagen con el método cv2.INTER_LANCZOS
-    print(f"[SCALING] {filename} scaling with lanczos")
     chat_id = int((filename.split("_"))[0])
-    # Se envia mensaje de inicio de escalado y se escala
-    send_message(chat_id, "Scaling Image (Interpolation)...")
-    imagen_escalada = cv2.resize(
-        image, (nuevo_ancho, nuevo_alto), interpolation=cv2.INTER_LANCZOS4)
-    print(f"[SCALING] {filename} scaling finished")
+    try:
+        image = cv2.imread(image_path, cv2.IMREAD_COLOR)
+        if image is None:
+            raise IOError(f'[ERROR] Could not read image {image_path}')
+        # Leer la resolución de entrada de la imagen
+        alto, ancho = image.shape[:2]
+        # Duplicar la resolución de la imagen
+        nuevo_alto = alto * scale
+        nuevo_ancho = ancho * scale
 
-    # Aplicar filtro de reduccion de ruido bilateral
-    print(f"[DENOISING] {filename} denoising image")
-    imagen_escalada = cv2.bilateralFilter(imagen_escalada, 7, 50, 50)
-    print(f"[DENOISING] {filename} denoising finished")
+        # Escalar la imagen con el método cv2.INTER_LANCZOS
+        print(f"[SCALING] {filename} scaling with lanczos")
+        
+        # Se envia mensaje de inicio de escalado y se escala
+        send_message(chat_id, "Scaling Image (Interpolation)...")
+        imagen_escalada = cv2.resize(
+            image, (nuevo_ancho, nuevo_alto), interpolation=cv2.INTER_LANCZOS4)
+        print(f"[SCALING] {filename} scaling finished")
 
-    # Shapening de bordes con filtro de unsharp mask
-    print(f"[SHARPENING] {filename} sharpening image")
-    sigma = 1
-    amount = 1.5
-    threshold = 0
-    blurred = cv2.GaussianBlur(imagen_escalada, (0, 0), sigma)
-    imagen_escalada = cv2.addWeighted(imagen_escalada, 1 + amount, blurred, -amount, threshold)
-    print(f"[SHARPENING] {filename} sharpening finished")
+        # Aplicar filtro de reduccion de ruido bilateral
+        print(f"[DENOISING] {filename} denoising image")
+        imagen_escalada = cv2.bilateralFilter(imagen_escalada, 7, 50, 50)
+        print(f"[DENOISING] {filename} denoising finished")
 
-    # Exportar la imagen escalada localmente
-    print(f"[SCALING] {filename} exporting")
-    os.makedirs('./upscaled_files/', exist_ok=True)
-    export_path = f'./upscaled_files/upscaled_{filename}'
-    cv2.imwrite(export_path, imagen_escalada)
-    print(f"[SCALING] {filename} exported succesfully")
+        # Shapening de bordes con filtro de unsharp mask
+        print(f"[SHARPENING] {filename} sharpening image")
+        sigma = 1
+        amount = 1.5
+        threshold = 0
+        blurred = cv2.GaussianBlur(imagen_escalada, (0, 0), sigma)
+        imagen_escalada = cv2.addWeighted(imagen_escalada, 1 + amount, blurred, -amount, threshold)
+        print(f"[SHARPENING] {filename} sharpening finished")
 
-    # Informacion de log
-    print(f'Resolucion de entrada: {alto}x{ancho}')
-    print(f'Razon de escala: x{scale}')
-    print(f'Resolucion de salida: {nuevo_alto}x{nuevo_ancho}')
-    send_message(chat_id, f"Scaling finished, output resolution: {nuevo_ancho}x{nuevo_alto}")
+        # Exportar la imagen escalada localmente
+        print(f"[SCALING] {filename} exporting")
+        os.makedirs('./upscaled_files/', exist_ok=True)
+        export_path = f'./upscaled_files/upscaled_{filename}'
+        cv2.imwrite(export_path, imagen_escalada)
+        print(f"[SCALING] {filename} exported succesfully")
 
-    # Algoritmo de compresion para lograr que pese menos de 50 MB
-    max_size = 50 * 1024 * 1024
-    while os.path.getsize(export_path) > max_size:
-        compress_image(export_path)
+        # Informacion de log
+        print(f'Resolucion de entrada: {alto}x{ancho}')
+        print(f'Razon de escala: x{scale}')
+        print(f'Resolucion de salida: {nuevo_alto}x{nuevo_ancho}')
+        send_message(chat_id, f"Scaling finished, output resolution: {nuevo_ancho}x{nuevo_alto}")
 
-    cv2.waitKey(1000)
-    cv2.destroyAllWindows()
+        # Algoritmo de compresion para lograr que pese menos de 50 MB
+        max_size = 50 * 1024 * 1024
+        while os.path.getsize(export_path) > max_size:
+            compress_image(export_path)
+    
+    except IOError as e:
+        # Manejo de errores relacionados a lectura o escritura
+        print(f'[ERROR] {e}')
+        send_message(chat_id, "An error occurred while reading or writing the image file.")
+    except cv2.error as e:
+        # Manejo de errores relacionados con OpenCV
+        print(f'[ERROR] {e}')
+        send_message(chat_id, "An error occurred while processing the image.")
+    except Exception as e:
+        # Manejo de cualquier otro tipo de error
+        print(f'[ERROR] {e}')
+        send_message(chat_id, "An unexpected error occurred.")
+    finally:
+        cv2.waitKey(1000)
+        cv2.destroyAllWindows()
 
 
 def scale_image_ia(filename):
@@ -108,107 +125,121 @@ def scale_image_ia(filename):
         output_image.save(f"./upscaled_files/upscaled_{filename}")
     except replicate.exceptions.ModelError:
         print("[ERROR] API Out of memory")
+        send_message(chat_id, "An error occurred while scaling the image with AI: API Out of memory")
+    except Exception as e:
+        print(f"[ERROR] {e}")
 
 def scale_video(filename, scale):
-    # Abrir el video original
-    video_path = f'./rec_files/{filename}'
-    cap = cv2.VideoCapture(video_path)
-
-    # Obtener el ancho y el alto del video
-    ancho = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    alto = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-    # Obtener la cantidad de fotogramas del video
-    frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    pbar = tqdm(total=frames, desc="Processing Video",
-                unit="frame", colour="green")
-
-    # Definir el factor de escala
-    escala = scale
-
-    # Definir el nuevo ancho y alto
-    nuevo_ancho = ancho * escala
-    nuevo_alto = alto * escala
-
-    # Definir el codec y el nombre del nuevo video
-    fourcc = cv2.VideoWriter_fourcc(*"avc1")  # Codec H264 (avc1), H265 (hvc1)
-    os.makedirs('./upscaled_files/', exist_ok=True)
-    out = cv2.VideoWriter(f"./upscaled_files/upscaled_{filename}", fourcc, 30.0, (nuevo_ancho, nuevo_alto))
-
-    # Obtener chat_id del usuario a partir del filename
-    chat_id = int((filename.split("_"))[0])
-    send_message(chat_id, "Scaling Video...")
-
-    # Get the output of ffprobe as a string
-    output_audio = subprocess.run(["ffprobe", "-show_streams", video_path], capture_output=True, text=True).stdout
-
-    # Usar ffmpeg para extraer el audio del video original
-    # Check if the output contains the word "audio"
-    if "audio" in output_audio:
-        # The video has audio, extract it
-        subprocess.run(["ffmpeg", "-i", video_path, "-vn", "-acodec", "copy", "audio.aac"])
-    else:
-        # The video has no audio, do nothing
-        print("[PROCESS] The video has no audio")
-
-    # Leer cada frame del video original y escalarlo
-    while True:
-        ret, frame = cap.read()
-        if ret:
-            pbar.update(1)
-            # Escalar el frame con interpolación lanczos
-            frame_escalado = cv2.resize(frame, (nuevo_ancho, nuevo_alto), interpolation=cv2.INTER_LANCZOS4)
-            frame
-            # Aplicar filtro de reduccion de ruido bilateral
-            frame_escalado = cv2.bilateralFilter(frame_escalado, 7, 50, 50)
-            # Shapening de bordes con filtro de unsharp mask
-            sigma = 1
-            amount = 1.5
-            threshold = 0
-            blurred = cv2.GaussianBlur(frame_escalado, (0, 0), sigma)
-            frame_escalado = cv2.addWeighted(frame_escalado, 1 + amount, blurred, -amount, threshold)
-            # Escribir el frame escalado en el nuevo video
-            out.write(frame_escalado)
-        else:
-            break
-
-    pbar.close()
-
-    # Log de salida
-    print(f'Resolucion de entrada: {ancho}x{alto}')
-    print(f'Razon de escala: x{escala}')
-    print(f'Resolucion de salida: {nuevo_ancho}x{nuevo_alto}')
-    send_message(
-        chat_id, f"Scaling finished, output resolution: {nuevo_ancho}x{nuevo_alto}")
-
-    # Liberar los recursos
-    cap.release()
-    out.release()
-
-    export_path = f"./upscaled_files/upscaled_{filename}"
-    output = f"./upscaled_files/a_upscaled_{filename}"
-    # Usar ffmpeg para aplicar el audio al nuevo video escalado
-    # Check if the audio file exists
-    if os.path.exists("audio.aac"):
-        # The audio file exists, apply it to the new video
-        subprocess.run(["ffmpeg", "-v", "quiet", "-stats", "-i", export_path, "-i", "audio.aac", "-c:v", "copy", "-c:a", "aac", "-map", "0:v:0", "-map", "1:a:0", "-y", output])
-        os.remove(export_path)
-        os.rename(output, export_path)
-    else:
-        # The audio file does not exist, do nothing or handle the case
-        print("[PROCESS] The audio file does not exist")
-
-    cv2.destroyAllWindows()
-
     try:
-        os.remove("audio.aac")
-    except OSError as e:
-        print(f"Error: {e.filename} - {e.strerror}.")
+        # Abrir el video original
+        video_path = f'./rec_files/{filename}'
+        cap = cv2.VideoCapture(video_path)
+
+        # Obtener el ancho y el alto del video
+        ancho = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        alto = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        # Obtener la cantidad de fotogramas del video
+        frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        pbar = tqdm(total=frames, desc="Processing Video",
+                    unit="frame", colour="green")
+
+        # Definir el factor de escala
+        escala = scale
+
+        # Definir el nuevo ancho y alto
+        nuevo_ancho = ancho * escala
+        nuevo_alto = alto * escala
+
+        # Definir el codec y el nombre del nuevo video
+        fourcc = cv2.VideoWriter_fourcc(*"avc1")  # Codec H264 (avc1), H265 (hvc1)
+        os.makedirs('./upscaled_files/', exist_ok=True)
+        out = cv2.VideoWriter(f"./upscaled_files/upscaled_{filename}", fourcc, 30.0, (nuevo_ancho, nuevo_alto))
+
+        # Obtener chat_id del usuario a partir del filename
+        chat_id = int((filename.split("_"))[0])
+        send_message(chat_id, "Scaling Video...")
+
+        # Get the output of ffprobe as a string
+        output_audio = subprocess.run(["ffprobe", "-show_streams", video_path], capture_output=True, text=True).stdout
+
+        # Usar ffmpeg para extraer el audio del video original
+        # Check if the output contains the word "audio"
+        if "audio" in output_audio:
+            # The video has audio, extract it
+            subprocess.run(["ffmpeg", "-i", video_path, "-vn", "-acodec", "copy", "audio.aac"])
+        else:
+            # The video has no audio, do nothing
+            print("[PROCESS] The video has no audio")
+
+        # Leer cada frame del video original y escalarlo
+        while True:
+            try:
+                ret, frame = cap.read()
+                if ret:
+                    pbar.update(1)
+                    # Escalar el frame con interpolación lanczos
+                    frame_escalado = cv2.resize(frame, (nuevo_ancho, nuevo_alto), interpolation=cv2.INTER_LANCZOS4)
+                    frame
+                    # Aplicar filtro de reduccion de ruido bilateral
+                    frame_escalado = cv2.bilateralFilter(frame_escalado, 7, 50, 50)
+                    # Shapening de bordes con filtro de unsharp mask
+                    sigma = 1
+                    amount = 1.5
+                    threshold = 0
+                    blurred = cv2.GaussianBlur(frame_escalado, (0, 0), sigma)
+                    frame_escalado = cv2.addWeighted(frame_escalado, 1 + amount, blurred, -amount, threshold)
+                    # Escribir el frame escalado en el nuevo video
+                    out.write(frame_escalado)
+                else:
+                    break
+            except Exception as e:
+                print(f"[ERROR] Error reading or processing the frame: {e}")
+
+        pbar.close()
+
+        # Log de salida
+        print(f'Resolucion de entrada: {ancho}x{alto}')
+        print(f'Razon de escala: x{escala}')
+        print(f'Resolucion de salida: {nuevo_ancho}x{nuevo_alto}')
+        send_message(
+            chat_id, f"Scaling finished, output resolution: {nuevo_ancho}x{nuevo_alto}")
+
+        # Liberar los recursos
+        cap.release()
+        out.release()
+
+        export_path = f"./upscaled_files/upscaled_{filename}"
+        output = f"./upscaled_files/a_upscaled_{filename}"
+        # Usar ffmpeg para aplicar el audio al nuevo video escalado
+        # Check if the audio file exists
+        if os.path.exists("audio.aac"):
+            # The audio file exists, apply it to the new video
+            subprocess.run(["ffmpeg", "-v", "quiet", "-stats", "-i", export_path, "-i", "audio.aac", "-c:v", "copy", "-c:a", "aac", "-map", "0:v:0", "-map", "1:a:0", "-y", output])
+            os.remove(export_path)
+            os.rename(output, export_path)
+        else:
+            # The audio file does not exist, do nothing or handle the case
+            print("[PROCESS] The audio file does not exist")
+
+        cv2.destroyAllWindows()
+
+        try:
+            os.remove("audio.aac")
+        except OSError as e:
+            print(f"Error: {e.filename} - {e.strerror}.")
+        
+        # Comprime el video si pesa mas de 50MB
+        max_size = 50 * 1024 * 1024
+        if os.path.getsize(export_path) > max_size:
+            input_path = f"./upscaled_files/upscaled_{filename}"
+            output_path = f"./upscaled_files/c_upscaled_{filename}"
+            send_message(chat_id, "Compressing video, this may take a while...")
+            compress_video(input_path, output_path, 50) 
     
-    # Comprime el video si pesa mas de 50MB
-    max_size = 50 * 1024 * 1024
-    if os.path.getsize(export_path) > max_size:
-        input_path = f"./upscaled_files/upscaled_{filename}"
-        output_path = f"./upscaled_files/c_upscaled_{filename}"
-        send_message(chat_id, "Compressing video, this may take a while...")
-        compress_video(input_path, output_path, 50) 
+    except FileNotFoundError as e:
+        print(f"[ERROR] {e}")
+    except NameError as e:
+        print(f"[ERROR] {e}")
+    except TypeError as e:
+        print(f"[ERROR] {e}")
