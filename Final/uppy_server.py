@@ -169,10 +169,6 @@ if __name__ == "__main__":
                         help='Port of the server process')
     args = parser.parse_args()
 
-    # IPs conecction test: 127.0.0.1, ::1, 172.31.161.195 o fe80::215:5dff:fe7c:b97b
-
-    #! Mejorar manejo de errores
-
     # Procesa la cola en un proceso hijo
 
     try:
