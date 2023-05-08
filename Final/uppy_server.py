@@ -143,10 +143,7 @@ def server(args):
                 server.serve_forever()
         except OSError as e:
             print(f'[ERROR] {e} for IP address')
-            try:
-                server.shutdown()
-            except OSError:
-                pass
+            sys.exit(0)
     elif re.search(ipv4, args.ip):
         try:
             with ForkedTCPServer4((HOST, PORT), TCPRequestHandler) as server:
