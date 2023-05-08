@@ -46,20 +46,6 @@ async def get_updates():
     async with bot:
         print((await bot.get_updates())[0])
 
-async def await_message(message):
-    global chat_id
-    bot = telegram.Bot(token)
-    async with bot:
-        try:
-            with open('./data/chat_id.txt', 'r') as f:
-                chat_id = int(f.read())
-            await bot.send_message(chat_id=chat_id, text=message)
-        except FileNotFoundError or ValueError:
-            print("First, you must send the command /start to save the chat_id")
-
-def send_message(message):
-    asyncio.run(await_message(message))
-
 async def receive_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     video = update.message.video

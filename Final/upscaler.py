@@ -151,10 +151,13 @@ def scale_video(filename, scale):
         nuevo_ancho = ancho * escala
         nuevo_alto = alto * escala
 
+         # Obtener el framerate del video
+        framerate = cap.get(cv2.CAP_PROP_FPS)
+
         # Definir el codec y el nombre del nuevo video
         fourcc = cv2.VideoWriter_fourcc(*"avc1")  # Codec H264 (avc1), H265 (hvc1)
         os.makedirs('./upscaled_files/', exist_ok=True)
-        out = cv2.VideoWriter(f"./upscaled_files/upscaled_{filename}", fourcc, 30.0, (nuevo_ancho, nuevo_alto))
+        out = cv2.VideoWriter(f"./upscaled_files/upscaled_{filename}", fourcc, framerate, (nuevo_ancho, nuevo_alto))
 
         # Obtener chat_id del usuario a partir del filename
         chat_id = int((filename.split("_"))[0])

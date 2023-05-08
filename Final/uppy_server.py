@@ -85,43 +85,49 @@ def process_queue():
         while True:
             while not queue.empty():
                 filename, scale_method = queue.get_nowait()
+                mimetypes.add_type("image/webp", ".webp", strict=True)
                 filetype, encoding = mimetypes.guess_type(filename)
+                chat_id = int((filename.split("_"))[0])
                 print(f'[PROCESSING] Processing file {filename}...')
                 print(f"[TESTING] Scale method set to {scale_method} with type {type(scale_method)}")
-                if filetype.startswith('video/'):
-                    # Se genera un proceso hijo para procesar el video
-                    p_image = multiprocessing.Process(
-                        target=scale_video, args=(filename, 2))
-                    print(f'[PROCESSING] Generating son process for {filename}')
-                    p_image.start()
-                    p_image.join()
-                else:
-                    # Se genera un proceso hijo para procesar la imagen
-                    if scale_method == 0:
-                        #Procesar imagen con Interpolado de pixeles
-                        p_image = multiprocessing.Process(
-                            target=scale_image, args=(filename, 2))
-                        print(f'[PROCESSING] Generating son process for {filename}')
-                        p_image.start()
-                        p_image.join()
-                    elif scale_method == 1:
-                        # Procesar imagen con AI
-                        p_image = multiprocessing.Process(
-                            target=scale_image_ia, args=(filename,))
-                        print(f'[PROCESSING] Generating son process for {filename}')
-                        p_image.start()
-                        p_image.join()
-                print(f'[PROCESSING] File {filename} processed')
-                file_path = f'./upscaled_files/upscaled_{filename}'
-                chat_id = int((filename.split("_"))[0])
-                print(f'[SENDING] Sending file {filename} to Telegram user')
-                os.remove(f'./rec_files/{filename}')
                 try:
-                    send_file(file_path, filetype, chat_id)
-                    os.remove(file_path)
-                except FileNotFoundError:
-                    print("[ERROR] File not found")
-                    send_message(chat_id, "There was an error processing the file.")
+                    if filetype.startswith('video/'):
+                        # Se genera un proceso hijo para procesar el video
+                        p_image = multiprocessing.Process(
+                            target=scale_video, args=(filename, 2))
+                        print(f'[PROCESSING] Generating son process for {filename}')
+                        p_image.start()
+                        p_image.join()
+                    else:
+                        # Se genera un proceso hijo para procesar la imagen
+                        if scale_method == 0:
+                            #Procesar imagen con Interpolado de pixeles
+                            p_image = multiprocessing.Process(
+                                target=scale_image, args=(filename, 2))
+                            print(f'[PROCESSING] Generating son process for {filename}')
+                            p_image.start()
+                            p_image.join()
+                        elif scale_method == 1:
+                            # Procesar imagen con AI
+                            p_image = multiprocessing.Process(
+                                target=scale_image_ia, args=(filename,))
+                            print(f'[PROCESSING] Generating son process for {filename}')
+                            p_image.start()
+                            p_image.join()
+                    print(f'[PROCESSING] File {filename} processed')
+                    file_path = f'./upscaled_files/upscaled_{filename}'
+                    print(f'[SENDING] Sending file {filename} to Telegram user')
+                    os.remove(f'./rec_files/{filename}')
+                    try:
+                        send_file(file_path, filetype, chat_id)
+                        os.remove(file_path)
+                    except FileNotFoundError or UnboundLocalError:
+                        print("[ERROR] File not found")
+                        send_message(chat_id, "There was an error processing the file.")
+                except AttributeError:
+                    print('[ERROR] File type is incorrect')
+                    send_message(chat_id, "File type is incorrect")
+                
     except KeyboardInterrupt:
         print('[TERMINATED] Queue process terminated')
     except ConnectionResetError or BrokenPipeError as e:
