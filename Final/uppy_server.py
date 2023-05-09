@@ -10,6 +10,7 @@ from queue import Queue
 from tqdm import tqdm
 import multiprocessing
 import mimetypes
+from colorama import Fore
 from telegram_sender import send_file, send_message
 from upscaler import scale_image, scale_image_ia, scale_video
 
@@ -32,28 +33,28 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
         BUFFER_SIZE = 1024 * 1024
-        print('[NEW CONNECTION] {} connected.'.format(self.client_address))
+        print(f'[{Fore.CYAN}NEW CONNECTION{Fore.RESET}]' +  ' {} connected.'.format(self.client_address))
         client = self.client_address
     
         try:
             # Leer el objeto serializado completo
-            print(f'[READING] Reading searialized object')
+            print(Fore.GREEN + f'[{Fore.GREEN}READING{Fore.RESET}] Reading searialized object')
             file_pickle = b''
             while True:
                 data = self.request.recv(BUFFER_SIZE)
                 if not data:
                     break
                 file_pickle += data
-            print(f'[READING] Serialized object readed')
+            print(f'[{Fore.GREEN}READING{Fore.RESET}] Serialized object readed')
 
             # Deserializar el objeto
             file_obj = pickle.loads(file_pickle)
-            print(f'[SERIALIZATION] Object deserialized')
+            print(f'[{Fore.GREEN}READING{Fore.RESET}] Object deserialized')
 
             # Leer el archivo completo
             # file_size = file_obj['size']
             file_data = b''
-            print(f'[READING] Reading file')
+            print(f'[{Fore.GREEN}READING{Fore.RESET}] Reading file')
             while True:
                 data = self.request.recv(BUFFER_SIZE)
                 if not data:
@@ -64,20 +65,20 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
             filename = file_obj['filename']
             file_data = file_obj['data']
             scale_method = file_obj['scale']
-            print(f'[SAVING] Saving file locally')
+            print(f'[{Fore.GREEN}SAVING{Fore.RESET}] Saving file locally')
             os.makedirs('./rec_files/', exist_ok=True)
             with open('./rec_files/' + filename, 'wb') as f:
                 f.write(file_data)
-            print(f'[SAVED] File saved as {filename}')
+            print(f'[{Fore.GREEN}SAVED{Fore.RESET}] File saved as {filename}')
             self.request.close()
 
-            print(f'[PROCESSING] Sending to queue')
+            print(f'[{Fore.GREEN}PROCESSING{Fore.RESET}] Sending to queue')
             queue.put_nowait((filename, scale_method))
         except (ConnectionResetError, ConnectionAbortedError) as e:
-            print(f"[ERROR] Error de conexión con el cliente {client}: {e}")
+            print(f"[{Fore.RED}ERROR{Fore.RESET}] Error de conexión con el cliente {client}: {e}")
 
         except Exception as e:
-            print(f"[ERROR] Error en el manejador de la conexión con el cliente {client}: {e}")
+            print(f"[{Fore.RED}ERROR{Fore.RESET}] Error en el manejador de la conexión con el cliente {client}: {e}")
 
 
 def process_queue():
@@ -88,14 +89,13 @@ def process_queue():
                 mimetypes.add_type("image/webp", ".webp", strict=True)
                 filetype, encoding = mimetypes.guess_type(filename)
                 chat_id = int((filename.split("_"))[0])
-                print(f'[PROCESSING] Processing file {filename}...')
-                print(f"[TESTING] Scale method set to {scale_method} with type {type(scale_method)}")
+                print(f'[{Fore.GREEN}PROCESSING{Fore.RESET}] Processing file {filename}...')
                 try:
                     if filetype.startswith('video/'):
                         # Se genera un proceso hijo para procesar el video
                         p_image = multiprocessing.Process(
                             target=scale_video, args=(filename, 2))
-                        print(f'[PROCESSING] Generating son process for {filename}')
+                        print(f'[{Fore.BLUE}PROCESSING{Fore.RESET}] Generating son process for {filename}')
                         p_image.start()
                         p_image.join()
                     else:
@@ -104,32 +104,34 @@ def process_queue():
                             #Procesar imagen con Interpolado de pixeles
                             p_image = multiprocessing.Process(
                                 target=scale_image, args=(filename, 2))
-                            print(f'[PROCESSING] Generating son process for {filename}')
+                            print(f'[{Fore.BLUE}PROCESSING{Fore.RESET}] Generating son process for {filename}')
                             p_image.start()
                             p_image.join()
                         elif scale_method == 1:
                             # Procesar imagen con AI
                             p_image = multiprocessing.Process(
                                 target=scale_image_ia, args=(filename,))
-                            print(f'[PROCESSING] Generating son process for {filename}')
+                            print(f'[{Fore.BLUE}PROCESSING{Fore.RESET}] Generating son process for {filename}')
                             p_image.start()
                             p_image.join()
-                    print(f'[PROCESSING] File {filename} processed')
+                    print(f'[{Fore.GREEN}PROCESSING{Fore.RESET}] File {filename} processed')
                     file_path = f'./upscaled_files/upscaled_{filename}'
-                    print(f'[SENDING] Sending file {filename} to Telegram user')
+                    print(f'[{Fore.GREEN}SENDING{Fore.RESET}] Sending file {filename} to Telegram user')
                     os.remove(f'./rec_files/{filename}')
                     try:
                         send_file(file_path, filetype, chat_id)
                         os.remove(file_path)
                     except FileNotFoundError or UnboundLocalError:
-                        print("[ERROR] File not found")
+                        print(f"[{Fore.RED}ERROR{Fore.RESET}] File not found")
                         send_message(chat_id, "There was an error processing the file.")
                 except AttributeError:
-                    print('[ERROR] File type is incorrect')
+                    print(f'[{Fore.RED}ERROR{Fore.RESET}] File type is incorrect')
                     send_message(chat_id, "File type is incorrect")
                 
     except KeyboardInterrupt:
-        print('[TERMINATED] Queue process terminated')
+        print(f'[{Fore.BLUE}TERMINATED{Fore.RESET}] Queue process terminated')
+    except BrokenPipeError as e:
+        print(f'[{Fore.RED}ERROR{Fore.RESET}] {e}')
     except ConnectionResetError or BrokenPipeError as e:
         sys.exit(0)
 
@@ -145,19 +147,19 @@ def server(args):
     if re.search(ipv6, args.ip):
         try:
             with ForkedTCPServer6((HOST, PORT), TCPRequestHandler) as server:
-                print(f'[WAITING] Server is waiting for connections on {HOST}:{PORT}')
+                print(f'[{Fore.BLUE}WAITING{Fore.RESET}] Server is waiting for connections on {HOST}:{PORT}')
                 server.serve_forever()
         except OSError as e:
-            print(f'[ERROR] {e} for IP address')
+            print(Fore.RED + f'[{Fore.RED}ERROR{Fore.RESET}] {e} for IP address')
             sys.exit(0)
     elif re.search(ipv4, args.ip):
         try:
             with ForkedTCPServer4((HOST, PORT), TCPRequestHandler) as server:
-                print(f'[WAITING] Server is waiting for connections on {HOST}:{PORT}')
+                print(f'[{Fore.BLUE}WAITING{Fore.RESET}] Server is waiting for connections on {HOST}:{PORT}')
 
                 server.serve_forever()
         except OSError as e:
-            print(f'[ERROR] {e} for IP address') 
+            print(f'[{Fore.RED}ERROR{Fore.RESET}] {e} for IP address') 
             sys.exit(0)
 
 
@@ -174,20 +176,20 @@ if __name__ == "__main__":
     try:
         queue_process = multiprocessing.Process(target=process_queue)
         queue_process.start()
-        print(f'[PROCESSING] Started queue process {queue_process.pid}...')
+        print(f'[{Fore.BLUE}PROCESSING{Fore.RESET}] Started queue process {queue_process.pid}...')
 
         # Inicia el servidor y se queda esperando conexiones en el proceso padre
-        print(f'[PROCESSING] Started server process')
+        print(f'[{Fore.BLUE}PROCESSING{Fore.RESET}] Started server process')
 
         try:
             server(args)
         except UnboundLocalError as e:
-            print(f'[ERROR] {e}. Server shutting down')
+            print(f'[{Fore.RED}ERROR{Fore.RESET}] {e}. Server shutting down')
             sys.exit(0)
 
         # Espera a que los procesos hijos terminen
         queue_process.join()
     except KeyboardInterrupt:
-        print('[TERMINATED] Server shutting down')
+        print(f'[{Fore.BLUE}TERMINATED{Fore.RESET}] Server shutting down')
 
-    print('[PROCESSING] All processes finished.')
+    print(f'[{Fore.BLUE}PROCESSING{Fore.RESET}] All processes finished.')

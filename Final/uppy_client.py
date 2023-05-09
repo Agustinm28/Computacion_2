@@ -7,6 +7,7 @@ import telegram
 from telegram.ext import filters, ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, Application, PollAnswerHandler, PollHandler, filters, CallbackQueryHandler
 from telegram.constants import ParseMode
 import asyncio
+from colorama import Fore
 import argparse
 import os
 import pickle
@@ -185,41 +186,41 @@ async def send_file(file, scale_method):
 
     try:
         with open(file, "rb") as f:
-            print("[SERIALIZING] Loading object") 
+            print(f"[{Fore.GREEN}SERIALIZING{Fore.RESET}] Loading object") 
             filename = os.path.basename(file)
             file_data = f.read()
             file_obj = {'filename':filename, 'data':file_data, 'scale':scale_method}
             file_pickle = pickle.dumps(file_obj) 
-            print("[SERIALIZING] Pickle object loaded")
+            print(f"[{Fore.GREEN}SERIALIZING{Fore.RESET}] Pickle object loaded")
             f.close()
     except IOError as e:
-        print(f"[ERROR] Could not read file: {e}")
+        print(f"[{Fore.RED}ERROR{Fore.RESET}] Could not read file: {e}")
         return
 
     try:
         if re.search(ipv6, args.ip):
             with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as sock:
                 sock.connect((HOST, PORT))
-                print(f"[CONNECT] Conexion establecida con {HOST} en el puerto {PORT}")
-                print("[SENDING FILE]")        
+                print(f"[{Fore.GREEN}CONNECT{Fore.RESET}] Conexion establecida con {HOST} en el puerto {PORT}")
+                print(f"[{Fore.GREEN}SENDING{Fore.RESET}] Sending file")        
                 sock.sendall(file_pickle)
                 sock.close()
                 os.remove(file)
         elif re.search(ipv4, args.ip):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect((HOST, PORT))
-                print(f"[CONNECT] Conexion establecida con {HOST} en el puerto {PORT}")
-                print("[SENDING FILE]")        
+                print(f"[{Fore.GREEN}CONNECT{Fore.RESET}] Conexion establecida con {HOST} en el puerto {PORT}")
+                print(f"[{Fore.GREEN}SENDING{Fore.RESET}] Sending file")        
                 sock.sendall(file_pickle)
                 sock.close()
                 try:
                     os.remove(file)
                 except Exception as e:
-                    print(f"[ERROR] Could not delete file: {e}")
+                    print(f"[{Fore.RED}ERROR{Fore.RESET}] Could not delete file: {e}")
     except ConnectionError as e:
-        print(f"[ERROR] Could not connect to server: {e}")
+        print(f"[{Fore.RED}ERROR{Fore.RESET}] Could not connect to server: {e}")
     except Exception as e:
-        print(f"[ERROR] Unknown error occurred: {e}")
+        print(f"[{Fore.RED}ERROR{Fore.RESET}] Unknown error occurred: {e}")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Telegram Bot')

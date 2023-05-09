@@ -8,6 +8,7 @@ from PIL import Image
 from moviepy.video.io.VideoFileClip import VideoFileClip
 import moviepy.editor as mp
 from ffprobe import FFProbe
+from colorama import Fore
 import ffmpeg
 import io
 import os
@@ -33,7 +34,7 @@ def scale_image(filename, scale):
     try:
         image = cv2.imread(image_path, cv2.IMREAD_COLOR)
         if image is None:
-            raise IOError(f'[ERROR] Could not read image {image_path}')
+            raise IOError(f'[{Fore.RED}ERROR{Fore.RESET}] Could not read image {image_path}')
         # Leer la resolución de entrada de la imagen
         alto, ancho = image.shape[:2]
         # Duplicar la resolución de la imagen
@@ -41,39 +42,39 @@ def scale_image(filename, scale):
         nuevo_ancho = ancho * scale
 
         # Escalar la imagen con el método cv2.INTER_LANCZOS
-        print(f"[SCALING] {filename} scaling with lanczos")
+        print(f"[{Fore.GREEN}SCALING{Fore.RESET}] {filename} scaling with lanczos")
         
         # Se envia mensaje de inicio de escalado y se escala
         send_message(chat_id, "Scaling Image (Interpolation)...")
         imagen_escalada = cv2.resize(
             image, (nuevo_ancho, nuevo_alto), interpolation=cv2.INTER_LANCZOS4)
-        print(f"[SCALING] {filename} scaling finished")
+        print(f"[{Fore.GREEN}SCALING{Fore.RESET}] {filename} scaling finished")
 
         # Aplicar filtro de reduccion de ruido bilateral
-        print(f"[DENOISING] {filename} denoising image")
+        print(f"[{Fore.GREEN}DENOISING{Fore.RESET}] {filename} denoising image")
         imagen_escalada = cv2.bilateralFilter(imagen_escalada, 7, 50, 50)
-        print(f"[DENOISING] {filename} denoising finished")
+        print(f"[{Fore.GREEN}DENOISING{Fore.RESET}] {filename} denoising finished")
 
         # Shapening de bordes con filtro de unsharp mask
-        print(f"[SHARPENING] {filename} sharpening image")
+        print(f"[{Fore.GREEN}SHARPENING{Fore.RESET}] {filename} sharpening image")
         sigma = 1
         amount = 1.5
         threshold = 0
         blurred = cv2.GaussianBlur(imagen_escalada, (0, 0), sigma)
         imagen_escalada = cv2.addWeighted(imagen_escalada, 1 + amount, blurred, -amount, threshold)
-        print(f"[SHARPENING] {filename} sharpening finished")
+        print(f"[{Fore.GREEN}SHARPENING{Fore.RESET}] {filename} sharpening finished")
 
         # Exportar la imagen escalada localmente
-        print(f"[SCALING] {filename} exporting")
+        print(f"[{Fore.GREEN}SCALING{Fore.RESET}] {filename} exporting")
         os.makedirs('./upscaled_files/', exist_ok=True)
         export_path = f'./upscaled_files/upscaled_{filename}'
         cv2.imwrite(export_path, imagen_escalada)
-        print(f"[SCALING] {filename} exported succesfully")
+        print(f"[{Fore.GREEN}SCALING{Fore.RESET}] {filename} exported succesfully")
 
         # Informacion de log
-        print(f'Resolucion de entrada: {alto}x{ancho}')
-        print(f'Razon de escala: x{scale}')
-        print(f'Resolucion de salida: {nuevo_alto}x{nuevo_ancho}')
+        print(f'{Fore.YELLOW}Resolucion de entrada:{Fore.RESET} {alto}x{ancho}')
+        print(f'{Fore.YELLOW}Razon de escala:{Fore.RESET} x{scale}')
+        print(f'{Fore.YELLOW}Resolucion de salida:{Fore.RESET} {nuevo_alto}x{nuevo_ancho}')
         send_message(chat_id, f"Scaling finished, output resolution: {nuevo_ancho}x{nuevo_alto}")
 
         # Algoritmo de compresion para lograr que pese menos de 50 MB
@@ -83,15 +84,15 @@ def scale_image(filename, scale):
     
     except IOError as e:
         # Manejo de errores relacionados a lectura o escritura
-        print(f'[ERROR] {e}')
+        print(f'[{Fore.RED}ERROR{Fore.RESET}] {e}')
         send_message(chat_id, "An error occurred while reading or writing the image file.")
     except cv2.error as e:
         # Manejo de errores relacionados con OpenCV
-        print(f'[ERROR] {e}')
+        print(f'[{Fore.RED}ERROR{Fore.RESET}] {e}')
         send_message(chat_id, "An error occurred while processing the image.")
     except Exception as e:
         # Manejo de cualquier otro tipo de error
-        print(f'[ERROR] {e}')
+        print(f'[{Fore.RED}ERROR{Fore.RESET}] {e}')
         send_message(chat_id, "An unexpected error occurred.")
     finally:
         cv2.waitKey(1000)
@@ -109,25 +110,29 @@ def scale_image_ia(filename):
         input_image.save(input_file, format="JPEG")
 
         # Ejecutar el modelo de escalado
+        print(f'[{Fore.GREEN}SCALING{Fore.RESET}] {filename} scaling with AI')
         send_message(chat_id, "Scaling Image (AI)...")
         output_image = replicate.run(
             "nightmareai/real-esrgan:42fed1c4974146d4d2414e2be2c5277c7fcf05fcc3a73abf41610695738c1d7b",
-            input={"image": input_file, "face_enhance":False}
+            input={"image": input_file, "face_enhance":True}
         )
+        print(f'[{Fore.GREEN}SCALING{Fore.RESET}] Scaling with AI finished')
 
         # Descargar la imagen desde la URL
+        print(f'[{Fore.GREEN}SCALING{Fore.RESET}] Saving image')
         response = requests.get(output_image)
         output_image = PIL.Image.open(io.BytesIO(response.content))
         width, height = output_image.size
+        print(f'[{Fore.GREEN}SCALING{Fore.RESET}] Image saved correctly')
         send_message(chat_id, f"Scaling finished, output resolution: {width}x{height}")
 
         # Guardar la imagen de salida
         output_image.save(f"./upscaled_files/upscaled_{filename}")
     except replicate.exceptions.ModelError:
-        print("[ERROR] API Out of memory")
+        print(f"[{Fore.RED}ERROR{Fore.RESET}] API Out of memory")
         send_message(chat_id, "An error occurred while scaling the image with AI: API Out of memory")
     except Exception as e:
-        print(f"[ERROR] {e}")
+        print(f"[{Fore.RED}ERROR{Fore.RESET}] {e}")
 
 def scale_video(filename, scale):
     try:
@@ -173,7 +178,7 @@ def scale_video(filename, scale):
             subprocess.run(["ffmpeg", "-i", video_path, "-vn", "-acodec", "copy", "audio.aac"])
         else:
             # The video has no audio, do nothing
-            print("[PROCESS] The video has no audio")
+            print(f"[{Fore.YELLOW}INFO{Fore.RESET}] The video has no audio")
 
         # Leer cada frame del video original y escalarlo
         while True:
@@ -197,14 +202,14 @@ def scale_video(filename, scale):
                 else:
                     break
             except Exception as e:
-                print(f"[ERROR] Error reading or processing the frame: {e}")
+                print(f"[{Fore.RED}ERROR{Fore.RESET}] Error reading or processing the frame: {e}")
 
         pbar.close()
 
         # Log de salida
-        print(f'Resolucion de entrada: {ancho}x{alto}')
-        print(f'Razon de escala: x{escala}')
-        print(f'Resolucion de salida: {nuevo_ancho}x{nuevo_alto}')
+        print(f'{Fore.YELLOW}Resolucion de entrada:{Fore.RESET} {ancho}x{alto}')
+        print(f'{Fore.YELLOW}Razon de escala:{Fore.RESET} x{escala}')
+        print(f'{Fore.YELLOW}Resolucion de salida:{Fore.RESET} {nuevo_ancho}x{nuevo_alto}')
         send_message(
             chat_id, f"Scaling finished, output resolution: {nuevo_ancho}x{nuevo_alto}")
 
@@ -223,14 +228,14 @@ def scale_video(filename, scale):
             os.rename(output, export_path)
         else:
             # The audio file does not exist, do nothing or handle the case
-            print("[PROCESS] The audio file does not exist")
+            print(f"[{Fore.YELLOW}PROCESS{Fore.RESET}] The audio file does not exist")
 
         cv2.destroyAllWindows()
 
         try:
             os.remove("audio.aac")
         except OSError as e:
-            print(f"Error: {e.filename} - {e.strerror}.")
+            print(f"[{Fore.RED}ERROR{Fore.RESET}] {e.filename} - {e.strerror}.")
         
         # Comprime el video si pesa mas de 50MB
         max_size = 50 * 1024 * 1024
@@ -241,8 +246,8 @@ def scale_video(filename, scale):
             compress_video(input_path, output_path, 50) 
     
     except FileNotFoundError as e:
-        print(f"[ERROR] {e}")
+        print(f"[{Fore.RED}ERROR{Fore.RESET}] {e}")
     except NameError as e:
-        print(f"[ERROR] {e}")
+        print(f"[{Fore.RED}ERROR{Fore.RESET}] {e}")
     except TypeError as e:
-        print(f"[ERROR] {e}")
+        print(f"[{Fore.RED}ERROR{Fore.RESET}] {e}")

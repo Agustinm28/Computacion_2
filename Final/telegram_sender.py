@@ -1,4 +1,5 @@
 import requests
+from colorama import Fore
 
 # Modulo destinado a enviar mensajes o archivos al usuario de Telegram
 
@@ -11,7 +12,7 @@ def send_message(chat_id, message):
         data = {"chat_id": chat_id, "text": message}
         response = requests.post(url, data=data)
     except requests.exceptions.RequestException as e:
-        print(f"Error sending the message: {e}")
+        print(f"[{Fore.RED}ERROR{Fore.RESET}]Error sending the message: {e}")
 
 def send_file(file_path, filetype, chat_id):
     try:
@@ -23,8 +24,8 @@ def send_file(file_path, filetype, chat_id):
         elif filetype.startswith('image/'):
             send_message(chat_id, "Downloading upscaled image...")
         response = requests.post(url, files=files, data=data)
-        print(response)
-        print(f'[SENDING] File sended')
+        print(f'[{Fore.YELLOW}RESPONSE{Fore.RESET}] {response}')
+        print(f'[{Fore.GREEN}SENDING{Fore.RESET}] File sended')
     except requests.exceptions.RequestException as e:
-        print(f"Error sending the file: {e}")
+        print(f"[{Fore.RED}ERROR{Fore.RESET}] Error sending the file: {e}")
         send_message(chat_id, "There was an error sending the file")
