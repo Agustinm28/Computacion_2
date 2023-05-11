@@ -114,7 +114,7 @@ def scale_image_ia(filename):
         send_message(chat_id, "Scaling Image (AI)...")
         output_image = replicate.run(
             "nightmareai/real-esrgan:42fed1c4974146d4d2414e2be2c5277c7fcf05fcc3a73abf41610695738c1d7b",
-            input={"image": input_file, "face_enhance":True}
+            input={"image": input_file, "face_enhance":False}
         )
         print(f'[{Fore.GREEN}SCALING{Fore.RESET}] Scaling with AI finished')
 
