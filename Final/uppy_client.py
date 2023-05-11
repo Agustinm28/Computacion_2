@@ -103,7 +103,27 @@ async def receive_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text("Select a upscale method:", reply_markup=reply_markup)
 
+
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    #Handler encargado de esperar una respuesta para el Keyboard inline
+    query = update.callback_query
+    await query.answer()
+    scale = query.data
+
+    # Obtiene el file path y metodo de escalado del callback_data
+    scale_data = scale.split('_', 1)
+    scale_method = int(scale_data[0])
+    file_path = scale_data[1]
+    if scale_method == 0:
+        scale_type = "Interpolation"
+    else:
+        scale_type = "AI"
+    await query.edit_message_text(text=f"Upscale method: {scale_type}")
+
+    # Envia la imagen al servidor para ser procesada
+    await send_file(file=file_path, scale_method=scale_method)
+
+async def button_scale(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     #Handler encargado de esperar una respuesta para el Keyboard inline
     query = update.callback_query
     await query.answer()

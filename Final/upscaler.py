@@ -114,7 +114,7 @@ def scale_image_ia(filename):
         send_message(chat_id, "Scaling Image (AI)...")
         output_image = replicate.run(
             "nightmareai/real-esrgan:42fed1c4974146d4d2414e2be2c5277c7fcf05fcc3a73abf41610695738c1d7b",
-            input={"image": input_file, "face_enhance":False}
+            input={"image": input_file, "face_enhance":False, "scale":4}
         )
         print(f'[{Fore.GREEN}SCALING{Fore.RESET}] Scaling with AI finished')
 
@@ -128,9 +128,9 @@ def scale_image_ia(filename):
 
         # Guardar la imagen de salida
         output_image.save(f"./upscaled_files/upscaled_{filename}")
-    except replicate.exceptions.ModelError:
-        print(f"[{Fore.RED}ERROR{Fore.RESET}] API Out of memory")
-        send_message(chat_id, "An error occurred while scaling the image with AI: API Out of memory")
+    except replicate.exceptions.ModelError as e:
+        print(f"[{Fore.RED}ERROR{Fore.RESET}] {e}")
+        send_message(chat_id, "An error occurred while scaling the image with AI. Send the image as a Photo, not document.")
     except Exception as e:
         print(f"[{Fore.RED}ERROR{Fore.RESET}] {e}")
 
