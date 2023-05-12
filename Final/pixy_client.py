@@ -27,9 +27,9 @@ logging.basicConfig(
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global chat_id
     chat_id = update.effective_chat.id
-    with open('./data/chat_id.txt', 'w') as f:
+    with open('./data/chat_ID.txt', 'w') as f:
         f.write(str(chat_id))
-    await context.bot.send_message(chat_id=chat_id, text="Hi! I have saved the chat_id for this chat.")
+    await context.bot.send_message(chat_id=chat_id, text="Hi! Im Pixy and i can upscale images or videos for you.")
 
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, parse_mode = 'html', text="<b>start</b> - Set the chat_id so that the bot can send you messages\n<b>help</b> - Tells you the bot commands\n<b>scale</b> - Tells you info about scale methods")
