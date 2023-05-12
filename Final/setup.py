@@ -34,9 +34,15 @@ except Exception as e:
 try:
     print('[INSTALL] Adding OpenCV to PATH')
     filename = os.path.expanduser("~/.bashrc")
-    with open(filename, "a") as f:
-        f.write("\n")
-        f.write("export PYTHONPATH=/usr/local/lib/python3.10/site-packages:$PYTHONPATH")
+    line = "export PYTHONPATH=/usr/local/lib/python3.10/site-packages:$PYTHONPATH"
+    with open(filename, "r") as f:
+        content = f.read()
+    if line not in content:
+        with open(filename, "a") as f:
+            f.write("\n")
+            f.write("export PYTHONPATH=/usr/local/lib/python3.10/site-packages:$PYTHONPATH")
+    else:
+        print('[INFO] OpenCV PATH already exists.')
 except Exception as e:
     print(f'[ERROR] OpenCV PATH adding failed. {e}')
 

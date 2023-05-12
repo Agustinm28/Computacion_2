@@ -130,7 +130,7 @@ def scale_image_ia(filename):
         output_image.save(f"./upscaled_files/upscaled_{filename}")
     except replicate.exceptions.ModelError as e:
         print(f"[{Fore.RED}ERROR{Fore.RESET}] {e}")
-        send_message(chat_id, "An error occurred while scaling the image with AI. Send the image as a Photo, not document.")
+        send_message(chat_id, "An error occurred while scaling the image with AI. Send the image as a Photo, not File.")
     except Exception as e:
         print(f"[{Fore.RED}ERROR{Fore.RESET}] {e}")
 
