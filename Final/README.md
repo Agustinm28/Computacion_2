@@ -24,6 +24,7 @@ You can use the bot from here [Pixy](https://t.me/uppy28bot).
 
     - **Images**: JPEG, PNG, etc.
     - **Videos**: MP4, AVI, etc.
+
 The maximum file size for both images and videos is 20MB.
 - When sending an image, you will be prompted to select a upscale method using an inline keyboard. Choose either "Interpolation" or "AI" method.
 
