@@ -11,7 +11,7 @@ Pixy is a Telegram bot that allows you to increase the quality and size of your 
 
 ## ⚡Usage
 
-You can use the bot from here [Pixy](t.me/uppy28bot).
+You can use the bot from here [Pixy](https://t.me/uppy28bot).
 
 - Start the bot by sending the `/start` command to it. This sets the chat ID for sending messages.
 
