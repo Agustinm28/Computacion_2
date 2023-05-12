@@ -11,8 +11,8 @@ from tqdm import tqdm
 import multiprocessing
 import mimetypes
 from colorama import Fore
-from telegram_sender import send_file, send_message
-from upscaler import scale_image, scale_image_ia, scale_video
+from modules.telegram_sender import send_file, send_message
+from modules.upscaler import scale_image, scale_image_ia, scale_video
 
 # Servidor del bot, encargado de recibir los archivos y procesarlos
 

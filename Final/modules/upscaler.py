@@ -16,8 +16,8 @@ import PIL
 import requests
 from PIL import Image
 import replicate
-from telegram_sender import send_message, send_file
-from compresser import compress_image, compress_video
+from modules.telegram_sender import send_message, send_file
+from modules.compresser import compress_image, compress_video
 
 # Modulo destinado a escalar imagenes y video por interpolado de pixeles o mediante IA con ESRGAN
 
