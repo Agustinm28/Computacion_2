@@ -35,7 +35,7 @@ def compress_video(input_path:str, export_path:str, max_size:int):
     except OSError as e:
         print(f'[{Fore.RED}ERROR{Fore.RESET}] File cannot be read or not exist. {e}')
 
-    # Compresion mas agresiva en caso de que siga pesando mas de los MB maximos
+    # Compresion mas agresiva en caso de que el archivo siga pesando mas de los MB maximos
     if os.path.getsize(input_path) > max_size * 1024 * 1024:
         print(f'[{Fore.YELLOW}COMPRESSION{Fore.RESET}] File is still larger than {max_size}MB ({os.path.getsize(export_path) // (1024 * 1024)}MB), starting agresive compression')
         try:    
