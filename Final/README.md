@@ -3,7 +3,9 @@
 
 Pixy is a Telegram bot that allows you to increase the quality and size of your images and videos quickly and easily. Just send it an image or video and choose the scaling method you like best: interpolation using the Lanczos method or artificial intelligence with the Real-ESRGAN model. The bot will process your image or video and return it to you with higher resolution and clarity.
 
-<img src="assets/pixy-logo.png" alt="Logo" width="360px" height="360px" align="center">
+<div style="text-align: center;">
+  <img src="assets/pixy-logo.png" alt="Logo" width="250px" height="250px">
+</div>
 
 ## 🎨Diagram and workflow
 
