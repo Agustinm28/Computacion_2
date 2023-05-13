@@ -14,9 +14,7 @@ from colorama import Fore
 from modules.telegram_sender import send_file, send_message
 from modules.upscaler import scale_image, scale_image_ia, scale_video
 
-# Servidor del bot, encargado de recibir los archivos y procesarlos
-
-manager = Manager()  # Creamos una cola compartida para comunicarse con los procesos hijos
+manager = Manager()  
 queue = manager.Queue()
 
 
@@ -32,12 +30,18 @@ class ForkedTCPServer6(socketserver.ForkingMixIn, socketserver.TCPServer):
 class TCPRequestHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
+        """
+        Handles a client connection in a server.
+
+        Returns:
+        - None
+        """
         BUFFER_SIZE = 1024 * 1024
         print(f'[{Fore.CYAN}NEW CONNECTION{Fore.RESET}]' +  ' {} connected.'.format(self.client_address))
         client = self.client_address
     
         try:
-            # Leer el objeto serializado completo
+            # Read the complete serialized object
             print(Fore.GREEN + f'[{Fore.GREEN}READING{Fore.RESET}] Reading searialized object')
             file_pickle = b''
             while True:
@@ -47,12 +51,11 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
                 file_pickle += data
             print(f'[{Fore.GREEN}READING{Fore.RESET}] Serialized object readed')
 
-            # Deserializar el objeto
+            # Deserialize the object
             file_obj = pickle.loads(file_pickle)
             print(f'[{Fore.GREEN}READING{Fore.RESET}] Object deserialized')
 
-            # Leer el archivo completo
-            # file_size = file_obj['size']
+            # Read the complete file
             file_data = b''
             print(f'[{Fore.GREEN}READING{Fore.RESET}] Reading file')
             while True:
@@ -61,7 +64,7 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
                     break
                 file_data += data
 
-            # Escribir el archivo en el disco
+            # Write the file in the disk
             filename = file_obj['filename']
             file_data = file_obj['data']
             scale_method = file_obj['scale']
@@ -75,13 +78,19 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
             print(f'[{Fore.GREEN}PROCESSING{Fore.RESET}] Sending to queue')
             queue.put_nowait((filename, scale_method))
         except (ConnectionResetError, ConnectionAbortedError) as e:
-            print(f"[{Fore.RED}ERROR{Fore.RESET}] Error de conexión con el cliente {client}: {e}")
+            print(f"[{Fore.RED}ERROR{Fore.RESET}] Error connecting to the client {client}: {e}")
 
         except Exception as e:
-            print(f"[{Fore.RED}ERROR{Fore.RESET}] Error en el manejador de la conexión con el cliente {client}: {e}")
+            print(f"[{Fore.RED}ERROR{Fore.RESET}] Error in the {client} client connection handle: {e}")
 
 
 def process_queue():
+    """
+    Processes the queue of files for scaling and sends the processed files to the corresponding Telegram user.
+
+    Returns:
+    - None
+    """
     try:
         while True:
             while not queue.empty():
@@ -92,23 +101,23 @@ def process_queue():
                 print(f'[{Fore.GREEN}PROCESSING{Fore.RESET}] Processing file {filename}...')
                 try:
                     if filetype.startswith('video/'):
-                        # Se genera un proceso hijo para procesar el video
+                        # A child process is spawned to process the video
                         p_image = multiprocessing.Process(
                             target=scale_video, args=(filename, 2))
                         print(f'[{Fore.BLUE}PROCESSING{Fore.RESET}] Generating son process for {filename}')
                         p_image.start()
                         p_image.join()
                     else:
-                        # Se genera un proceso hijo para procesar la imagen
+                        # A child process is spawned to process the image
                         if scale_method == 0:
-                            #Procesar imagen con Interpolado de pixeles
+                            # Image Processing with Pixel Interpolation
                             p_image = multiprocessing.Process(
                                 target=scale_image, args=(filename, 2))
                             print(f'[{Fore.BLUE}PROCESSING{Fore.RESET}] Generating son process for {filename}')
                             p_image.start()
                             p_image.join()
                         elif scale_method == 1:
-                            # Procesar imagen con AI
+                            # Image Processing with AI
                             p_image = multiprocessing.Process(
                                 target=scale_image_ia, args=(filename,))
                             print(f'[{Fore.BLUE}PROCESSING{Fore.RESET}] Generating son process for {filename}')

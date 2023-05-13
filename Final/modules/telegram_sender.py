@@ -1,8 +1,6 @@
 import requests
 from colorama import Fore
 
-# Modulo destinado a enviar mensajes o archivos al usuario de Telegram por la API
-
 with open('./data/BOT_CREDENTIALS.txt', 'r') as f:
     token = str(f.read())
 

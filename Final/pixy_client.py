@@ -48,15 +48,25 @@ async def get_updates():
         print((await bot.get_updates())[0])
 
 async def receive_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Receives a video update and saves it locally. Verifies the size of the video, sends a message if it exceeds the maximum size, and returns early. Otherwise, it downloads the video file and saves it to a specified path. If an error occurs during the download process, an error message is sent. Then, it sends a message indicating that the video was uploaded correctly and proceeds to send the video file to a server for processing.
+
+    Parameters:
+        update (Update): The update object containing information about the received message.
+        context (ContextTypes.DEFAULT_TYPE): The context object for handling the bot's functionality.
+    Returns:
+        None
+    """
+
     chat_id = update.effective_chat.id
     video = update.message.video
 
-    # Verificar tamaño del video
+    # Check the video size
     if video.file_size > 20 * 1024 * 1024:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="The maximum size for the video is 20MB")
         return
 
-    # Guarda el video localmente
+    # Saves the video locally
     await context.bot.send_message(chat_id=chat_id, text="Uploading video")
     video_file = await context.bot.get_file(video.file_id)
     os.makedirs("./videos", exist_ok=True)
@@ -67,20 +77,31 @@ async def receive_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.error(e)
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Error processing video")
 
-    # Envia el video al servidor para ser procesado
+    # Send the video to the server to be processed
     await context.bot.send_message(chat_id=update.effective_chat.id, text="Video uploaded correctly")
     await send_file(file=video_path, scale_method=None)
 
 async def receive_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Receives an image update and saves it locally. Verifies the size of the image, sends a message if it exceeds the maximum size, and returns early. Otherwise, it downloads the image file and saves it to a specified path. If an error occurs during the download process, an error message is sent. Finally, it sends a message indicating that the image was uploaded correctly and provides an inline keyboard for selecting an upscale method.
+
+    Parameters:
+
+    - update (Update): The update object containing information about the received message.
+    - context (ContextTypes.DEFAULT_TYPE): The context object for handling the bot's functionality.
+
+    Returns:
+    - None
+    """
     chat_id = update.effective_chat.id
     image = update.message.photo[-1]
 
-    # Verificar tamaño de la imagen
+    # Check the image size
     if image.file_size > 20 * 1024 * 1024:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="The maximum size for the image is 20MB")
         return
 
-    # Guarda la imagen localmente
+    # Saves the video locally
     await context.bot.send_message(chat_id=chat_id, text="Uploading image")
     image_file = await context.bot.get_file(image.file_id)
     os.makedirs("./images", exist_ok=True)
@@ -93,7 +114,7 @@ async def receive_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(chat_id=update.effective_chat.id, text="Image uploaded correctly")
 
-    # Keyboard inline para seleccionar metodo de escalado
+    # Keyboard inline to select scale method
     keyboard = [
             [InlineKeyboardButton("Interpolation", callback_data=f"0_{image_path}")],
             [InlineKeyboardButton("AI", callback_data=f"1_{image_path}")],
@@ -105,12 +126,23 @@ async def receive_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    #Handler encargado de esperar una respuesta para el Keyboard inline
+    """
+    Handles the button callback from an inline keyboard. Extracts the scale method and file path from the callback data. Sends a response to the callback query, indicating the selected upscale method. Then, sends the file to a server for processing using the specified scale method.
+
+    Parameters:
+
+    - update (Update): The update object containing information about the callback query.
+    - context (ContextTypes.DEFAULT_TYPE): The context object for handling the bot's functionality.
+
+    Returns:
+    - None
+    """
+    # Handler in charge of waiting for a response for Keyboard inline
     query = update.callback_query
     await query.answer()
     scale = query.data
 
-    # Obtiene el file path y metodo de escalado del callback_data
+    # Gets the file path and scaling method from callback_data
     scale_data = scale.split('_', 1)
     scale_method = int(scale_data[0])
     file_path = scale_data[1]
@@ -120,39 +152,31 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         scale_type = "AI"
     await query.edit_message_text(text=f"Upscale method: {scale_type}")
 
-    # Envia la imagen al servidor para ser procesada
-    await send_file(file=file_path, scale_method=scale_method)
-
-async def button_scale(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    #Handler encargado de esperar una respuesta para el Keyboard inline
-    query = update.callback_query
-    await query.answer()
-    scale = query.data
-
-    # Obtiene el file path y metodo de escalado del callback_data
-    scale_data = scale.split('_', 1)
-    scale_method = int(scale_data[0])
-    file_path = scale_data[1]
-    if scale_method == 0:
-        scale_type = "Interpolation"
-    else:
-        scale_type = "AI"
-    await query.edit_message_text(text=f"Upscale method: {scale_type}")
-
-    # Envia la imagen al servidor para ser procesada
+    # Send the image to the server to be processed
     await send_file(file=file_path, scale_method=scale_method)
 
 
-async def receive_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def receive_file(update: Update, context: ContextTypes.DEFAULT_TYPE):  
+    """
+    Receives a file update and saves it locally. Verifies the size of the file based on its MIME type (video or image). If the file size exceeds the maximum allowed, a message is sent and the function returns early. Otherwise, the file is downloaded and saved to the appropriate directory. If an error occurs during the download process, an error message is sent. For videos, the file is sent to a server for processing. For images, an inline keyboard is provided to select an upscale method. If the file type is not recognized, a corresponding message is sent.
+
+    Parameters:
+
+    - update (Update): The update object containing information about the received message.
+    - context (ContextTypes.DEFAULT_TYPE): The context object for handling the bot's functionality.
+    
+    Returns:
+    - None
+    """
     chat_id = update.effective_chat.id
     file = update.message.document
 
     if file.mime_type.startswith('video/'):
-        # Verificar tamaño del archivo
+        # Checks the file size
         if file.file_size > 20 * 1024 * 1024:
             await context.bot.send_message(chat_id=update.effective_chat.id, text="The maximum size for the video is 20MB")
             return
-        # Guarda el archivo localmente
+        # Saves the video locally
         await context.bot.send_message(chat_id=chat_id, text="Uploading video")
         document_file = await context.bot.get_file(file.file_id)
         os.makedirs("./videos", exist_ok=True)
@@ -163,11 +187,11 @@ async def receive_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logging.error(e)
             await context.bot.send_message(chat_id=update.effective_chat.id, text="Error processing video")
 
-        # Envia el archivo al servidor para ser procesado
+        # Sends the video to the server to be processed
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Video uploaded correctly")
         await send_file(file=file_path, scale_method=None)
     elif file.mime_type.startswith('image/'):
-        # Verificar tamaño del archivo
+        
         if file.file_size > 20 * 1024 * 1024:
             await context.bot.send_message(chat_id=update.effective_chat.id, text="The maximum size for the image is 20MB")
             return
@@ -183,7 +207,7 @@ async def receive_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Image uploaded correctly")
 
-        # Keyboard inline para seleccionar metodo de escalado
+        
         keyboard = [
                 [InlineKeyboardButton("Interpolation", callback_data=f"0_{file_path}")],
                 [InlineKeyboardButton("AI", callback_data=f"1_{file_path}")],
@@ -197,6 +221,17 @@ async def receive_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
 async def send_file(file, scale_method):
+    """
+    Sends a file to a server for processing.
+
+    Parameters:
+
+    - file (str): The path of the file to be sent.
+    - scale_method (int): The method of scaling to be applied to the file.
+    
+    Returns:
+    - None
+    """
     HOST, PORT = args.ip, int(args.port)
 
     with open('./data/ipv4.txt', 'r') as f:
@@ -221,7 +256,7 @@ async def send_file(file, scale_method):
         if re.search(ipv6, args.ip):
             with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as sock:
                 sock.connect((HOST, PORT))
-                print(f"[{Fore.GREEN}CONNECT{Fore.RESET}] Conexion establecida con {HOST} en el puerto {PORT}")
+                print(f"[{Fore.GREEN}CONNECT{Fore.RESET}] Connection established with {HOST} on port {PORT}")
                 print(f"[{Fore.GREEN}SENDING{Fore.RESET}] Sending file")        
                 sock.sendall(file_pickle)
                 sock.close()
@@ -229,7 +264,7 @@ async def send_file(file, scale_method):
         elif re.search(ipv4, args.ip):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect((HOST, PORT))
-                print(f"[{Fore.GREEN}CONNECT{Fore.RESET}] Conexion establecida con {HOST} en el puerto {PORT}")
+                print(f"[{Fore.GREEN}CONNECT{Fore.RESET}] Connection established with {HOST} on port {PORT}")
                 print(f"[{Fore.GREEN}SENDING{Fore.RESET}] Sending file")        
                 sock.sendall(file_pickle)
                 sock.close()
