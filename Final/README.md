@@ -43,7 +43,7 @@ The bot will upload the file to the server and process it using the selected ups
 
 ```bash
   git clone https://github.com/Agustinm28/Computacion_2.git
-  cd Computacion_2
+  cd Computacion_2/Final
 ```
 
 2. Install with setup.py

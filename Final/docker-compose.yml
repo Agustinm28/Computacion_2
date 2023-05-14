@@ -1,0 +1,12 @@
+version: '3'
+services:
+  client:
+    image: pixy_client
+    networks:
+      - pixynet
+  server:
+    image: pixy_server
+    networks:
+      - pixynet
+networks:
+  pixynet:
