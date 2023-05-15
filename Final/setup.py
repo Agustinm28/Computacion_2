@@ -5,8 +5,8 @@ import subprocess
 # Update and upgrade
 print('[INSTALL] Updating and upgrading')
 try:
-    subprocess.run(["sudo", "apt-get", "update", "-y"])
-    subprocess.run(["sudo", "apt-get", "upgrade", "-y"])
+    subprocess.run(["apt-get", "update", "-y"])
+    subprocess.run(["apt-get", "upgrade", "-y"])
 except Exception as e:
     print(f'[ERROR] Update and upgrade failed. {e}')
 
@@ -17,7 +17,7 @@ try:
     if "install ok installed" in result.stdout:
         print("[INSTALLED] OpenCV is already installed")
     else:
-        subprocess.run(["sudo", "apt-get", "install", "-y", "python3-opencv"])
+        subprocess.run(["apt-get", "install", "-y", "python3-opencv"])
 except Exception as e:
     print(f'[ERROR] OpenCV install failed. {e}')
 
@@ -26,7 +26,7 @@ try:
     if "install ok installed" in result.stdout:
         print("[INSTALLED] ffmpeg is already installed")
     else:
-        subprocess.run(["sudo", "apt-get", "install", "-y", "ffmpeg"])
+        subprocess.run(["apt-get", "install", "-y", "ffmpeg"])
 except Exception as e:
     print(f'[ERROR] ffmpeg install failed. {e}')
 
@@ -53,7 +53,7 @@ try:
     if "install ok installed" in result.stdout:
         pass
     else:
-        subprocess.run(["sudo", "apt-get", "install", "-y", "pip"])
+        subprocess.run(["apt-get", "install", "-y", "pip"])
     subprocess.run(["pip", "install", "-r", "requirements.txt"], check=True)
 except Exception as e:
     print(f'[ERROR] Dependencies install failed. {e}')
