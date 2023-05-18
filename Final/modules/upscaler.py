@@ -14,7 +14,6 @@ import io
 import os
 import PIL
 import requests
-from PIL import Image
 import replicate
 from modules.telegram_sender import send_message, send_file
 from modules.compresser import compress_image, compress_video
